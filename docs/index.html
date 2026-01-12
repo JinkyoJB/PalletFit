@@ -1,12 +1,318 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Project Page</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PalletFit</title>
+  <meta name="description" content="PalletFit: Stability-Aware Online 3D Bin Packing via Transformer-Based Reinforcement Learning" />
+
+  <style>
+    :root{
+      --bg:#0b0f19;
+      --card:#111827;
+      --text:#e5e7eb;
+      --muted:#9ca3af;
+      --line:#1f2937;
+      --accent:#60a5fa;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      background:linear-gradient(180deg, #070a12 0%, #0b0f19 100%);
+      color:var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      line-height:1.55;
+    }
+    a{ color:var(--accent); text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+    code{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+    .wrap{ max-width:1040px; margin:0 auto; padding:28px 16px 64px; }
+    .topbar{ display:flex; gap:12px; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+    .badge{ font-size:12px; color:var(--muted); border:1px solid var(--line); padding:6px 10px; border-radius:999px; }
+    .nav{ font-size:13px; color:var(--muted); }
+    .nav a{ color:var(--muted); }
+    .nav a:hover{ color:var(--text); }
+
+    h1{ font-size:34px; line-height:1.15; margin:12px 0 8px; }
+    h2{ font-size:18px; margin:0 0 10px; }
+    h3{ font-size:15px; margin:14px 0 8px; color:var(--text); }
+
+    .subtitle{ color:var(--muted); margin:0 0 18px; }
+    .small{ font-size:13px; color:var(--muted); }
+
+    .card{
+      background:rgba(17,24,39,0.72);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      backdrop-filter: blur(6px);
+    }
+
+    /* Video grid */
+    .video-grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap:16px;
+    }
+    .video{
+      position:relative;
+      width:100%;
+      aspect-ratio:16/9;
+      border-radius:14px;
+      overflow:hidden;
+      border:1px solid var(--line);
+      background:#000;
+    }
+    .video iframe{
+      width:100%;
+      height:100%;
+      border:0;
+      display:block;
+    }
+    .video-cap{
+      margin-top:8px;
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    .note{
+      font-size:14px;
+      color:var(--muted);
+      margin:12px 0 0;
+    }
+
+    /* Layout helpers */
+    .grid{ display:grid; gap:14px; }
+    @media (min-width: 920px){
+      .grid.two{ grid-template-columns: 1fr 1fr; }
+    }
+
+    /* Links buttons */
+    .links{ display:flex; flex-wrap:wrap; gap:10px; }
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 12px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:#0b1222;
+      color:var(--text);
+    }
+    .btn:hover{ border-color:#334155; text-decoration:none; }
+    .btn .dot{ width:8px; height:8px; border-radius:999px; background:var(--accent); display:inline-block; }
+
+    pre{
+      margin:0;
+      padding:12px;
+      background:#070b14;
+      border:1px solid var(--line);
+      border-radius:14px;
+      overflow:auto;
+      color:var(--text);
+      font-size:13px;
+    }
+
+    .pill{
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      color:var(--muted);
+      font-size:12px;
+      margin-right:6px;
+      margin-top:6px;
+    }
+
+    .footer{
+      margin-top:22px;
+      color:var(--muted);
+      font-size:12px;
+    }
+  </style>
 </head>
-<body style="font-family:system-ui; max-width:900px; margin:40px auto; padding:0 16px;">
-  <h1>My Paper Project</h1>
-  <p>Code, videos, and reproducibility instructions.</p>
+
+<body>
+  <div class="wrap">
+
+    <div class="topbar">
+      <div class="badge">Project Page • GitHub Pages</div>
+      <div class="nav">
+        <a href="#videos">Videos</a> ·
+        <a href="#abstract">Abstract</a> ·
+        <a href="#repro">Repro</a> ·
+        <a href="#code">Code</a> ·
+        <a href="#cite">BibTeX</a>
+      </div>
+    </div>
+
+    <!-- VIDEOS FIRST -->
+    <div class="card" id="videos">
+      <h2>Video Demos</h2>
+
+      <div class="video-grid">
+        <div>
+          <div class="video">
+            <iframe
+              src="https://www.youtube.com/embed/enMSlwSKaNA"
+              title="PalletFit Demo 1"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen></iframe>
+          </div>
+          <div class="video-cap">Demo 1 (×5 speed)</div>
+        </div>
+
+        <div>
+          <div class="video">
+            <iframe
+              src="https://www.youtube.com/embed/q9RHRpqSUQI"
+              title="PalletFit Demo 2"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen></iframe>
+          </div>
+          <div class="video-cap">Demo 2 (×5 speed)</div>
+        </div>
+
+        <div>
+          <div class="video">
+            <iframe
+              src="https://www.youtube.com/embed/DRZbpDZeMbU"
+              title="PalletFit Demo 3"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen></iframe>
+          </div>
+          <div class="video-cap">Demo 3 (×5 speed)</div>
+        </div>
+
+        <div>
+          <div class="video">
+            <iframe
+              src="https://www.youtube.com/embed/TquNe8IssNA"
+              title="PalletFit Demo 4"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen></iframe>
+          </div>
+          <div class="video-cap">Demo 4 (×5 speed)</div>
+        </div>
+
+        <div>
+          <div class="video">
+            <iframe
+              src="https://www.youtube.com/embed/6wh6sItsSFQ"
+              title="PalletFit Demo 5"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen></iframe>
+          </div>
+          <div class="video-cap">Demo 5 (×5 speed)</div>
+        </div>
+      </div>
+
+      <p class="note">All videos are shown at <b>×5 speed</b> unless otherwise stated.</p>
+    </div>
+
+    <!-- TITLE / AUTHORS -->
+    <h1 style="margin-top:18px;">
+      PalletFit: Stability-Aware Online 3D Bin Packing via Transformer-Based Reinforcement Learning
+    </h1>
+
+    <p class="subtitle">
+      Jinkyo Chung<sup>1</sup>, BongKyu Jeon<sup>1</sup>, Ju-Hwan Seo<sup>2</sup><br/>
+      <span class="small"><sup>1</sup>AI Laboratory, Uon Robotics, Daejeon, Republic of Korea · <sup>2</sup>CJ Logistics, Seoul, Republic of Korea</span><br/>
+      <span class="small">Emails: jinkyo.chung@gmail.com, bongkyu.jun@uonrobotics.com, seojh1989@gmail.com</span>
+    </p>
+
+    <div class="card">
+      <h2>Links</h2>
+      <div class="links">
+        <!-- You can enable these later -->
+        <!-- <a class="btn" href="paper.pdf"><span class="dot"></span>Paper (PDF)</a> -->
+        <!-- <a class="btn" href="https://arxiv.org/abs/XXXX.XXXXX"><span class="dot"></span>arXiv</a> -->
+
+        <a class="btn" href="#code"><span class="dot"></span>Code (Coming Soon)</a>
+        <a class="btn" href="#cite"><span class="dot"></span>BibTeX</a>
+      </div>
+
+      <h3 style="margin-top:16px;">TL;DR</h3>
+      <p class="small" style="margin:8px 0 0;">
+        Online stability-aware 3D bin packing for variable-sized items:
+        <b>EDP</b> candidate generation → <b>Transformer RL</b> joint item+placement selection under feasibility constraints → <b>Jam-Motion</b> execution for robust real-world packing.
+      </p>
+
+      <div style="margin-top:10px;">
+        <span class="pill">EDP candidates</span>
+        <span class="pill">Feasibility constraints</span>
+        <span class="pill">FT-Transformer RL</span>
+        <span class="pill">Jam-Motion</span>
+      </div>
+    </div>
+
+    <!-- ABSTRACT + OVERVIEW -->
+    <div class="grid two" style="margin-top:14px;">
+      <div class="card" id="abstract">
+        <h2>Abstract</h2>
+        <p class="small" style="margin:0;">
+          Industrial palletizing increasingly requires stable 3D bin packing of items with diverse sizes.
+          However, prior studies often restrict size variability and overlook physical stability, resulting in tilted or toppled placements and product damage.
+          We introduce PalletFit, an online stability-aware 3D bin packing framework designed for variable-sized items, unifying planning and execution through the Generation, Selection, and Execution stages.
+          In the Generation stage, we propose Edge-Projection (EDP), which discretizes the continuous placement space into a compact discrete candidate set using lightweight post-processing.
+          In the Selection stage, a Feature-Tokenizer Transformer-based Reinforcement Learning (RL) agent jointly selects items and placements under strict heuristic feasibility constraints to ensure physical realizability.
+          In the Execution stage, we employ a robot motion primitive, Jam-Motion, to compensate for sensing and control errors through final contact alignment before release.
+          Experimental results demonstrate that PalletFit markedly outperforms existing baselines, achieving dense and physically stable packing.
+          Real-world experiments on an industrial robot further confirm robust execution with no observed stability violations.
+        </p>
+        <p class="note" style="margin-top:10px;">
+          Videos are publicly available above. Code will be released upon paper acceptance.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Method Overview</h2>
+        <ul class="small" style="margin:0; padding-left:18px;">
+          <li><b>Generation:</b> Edge-Projection (EDP) turns continuous placement space into a compact candidate set.</li>
+          <li><b>Selection:</b> Feature-Tokenizer Transformer RL jointly selects item + placement with action masking under feasibility constraints.</li>
+          <li><b>Execution:</b> Jam-Motion aligns by contact to absorb sensing/control errors.</li>
+        </ul>
+
+      </div>
+    </div>
+
+    <!-- REPRO -->
+    <div class="card" id="repro" style="margin-top:14px;">
+      <h2>Reproducibility</h2>
+      <p class="small" style="margin:0 0 10px;">
+        Placeholder commands (update later when you release code).
+      </p>
+      <pre><code># Coming soon
+# We will provide installation and evaluation instructions upon release.</code></pre>
+    </div>
+
+    <!-- CODE COMING SOON -->
+    <div class="card" id="code" style="margin-top:14px;">
+      <h2>Code Availability</h2>
+      <p class="small" style="margin:0;">
+        The code will be released publicly upon paper acceptance.
+      </p>
+    </div>
+
+    <!-- BIBTEX -->
+    <div class="card" id="cite" style="margin-top:14px;">
+      <h2>Citation</h2>
+      <pre><code>@article{chung2026palletfit,
+  title   = {PalletFit: Stability-Aware Online 3D Bin Packing via Transformer-Based Reinforcement Learning},
+  author  = {Chung, Jinkyo and Jeon, BongKyu and Seo, Ju-Hwan},
+  journal = {arXiv preprint},
+  year    = {2026}
+}</code></pre>
+      <p class="note" style="margin-top:10px;">
+        Update the venue/arXiv info when finalized.
+      </p>
+    </div>
+
+    <div class="footer">
+      © 2026 PalletFit. Built with GitHub Pages.
+    </div>
+  </div>
 </body>
 </html>
