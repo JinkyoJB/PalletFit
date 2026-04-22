@@ -1,0 +1,3752 @@
+[
+  {
+    "partno": "0",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 300.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.656888
+  },
+  {
+    "partno": "1",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 100.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.208689
+  },
+  {
+    "partno": "2",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 500.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.252808
+  },
+  {
+    "partno": "3",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 400.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.934557
+  },
+  {
+    "partno": "4",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 200.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.478366
+  },
+  {
+    "partno": "5",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 100.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.592729
+  },
+  {
+    "partno": "6",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 500.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.042997
+  },
+  {
+    "partno": "7",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 100.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.882787
+  },
+  {
+    "partno": "8",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 200.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.71648
+  },
+  {
+    "partno": "9",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 300.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.31357
+  },
+  {
+    "partno": "10",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 500.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.476197
+  },
+  {
+    "partno": "11",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 500.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.226858
+  },
+  {
+    "partno": "12",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 300.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.697417
+  },
+  {
+    "partno": "13",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 500.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.958964
+  },
+  {
+    "partno": "14",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 200.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.244001
+  },
+  {
+    "partno": "15",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 400.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.4585
+  },
+  {
+    "partno": "16",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 400.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.67094
+  },
+  {
+    "partno": "17",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 200.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.219529
+  },
+  {
+    "partno": "18",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 500.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.588744
+  },
+  {
+    "partno": "19",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 200.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.793544
+  },
+  {
+    "partno": "20",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 400.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.852364
+  },
+  {
+    "partno": "21",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 500.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.545472
+  },
+  {
+    "partno": "22",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 500.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.049255
+  },
+  {
+    "partno": "23",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 500.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.308663
+  },
+  {
+    "partno": "24",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 300.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.056562
+  },
+  {
+    "partno": "25",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 400.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.202189
+  },
+  {
+    "partno": "26",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 100.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.444942
+  },
+  {
+    "partno": "27",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 300.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.529386
+  },
+  {
+    "partno": "28",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 500.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.913815
+  },
+  {
+    "partno": "29",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 300.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.451436
+  },
+  {
+    "partno": "30",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 100.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.991342
+  },
+  {
+    "partno": "31",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 300.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.099382
+  },
+  {
+    "partno": "32",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 100.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.436529
+  },
+  {
+    "partno": "33",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 400.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.669327
+  },
+  {
+    "partno": "34",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 100.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.321609
+  },
+  {
+    "partno": "35",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 200.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.584045
+  },
+  {
+    "partno": "36",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 300.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.904336
+  },
+  {
+    "partno": "37",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 400.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.866111
+  },
+  {
+    "partno": "38",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 100.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.239747
+  },
+  {
+    "partno": "39",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 100.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.186239
+  },
+  {
+    "partno": "40",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 500.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.605609
+  },
+  {
+    "partno": "41",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 300.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.894637
+  },
+  {
+    "partno": "42",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 400.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.176659
+  },
+  {
+    "partno": "43",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 100.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.560403
+  },
+  {
+    "partno": "44",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 300.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.232848
+  },
+  {
+    "partno": "45",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 200.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.324274
+  },
+  {
+    "partno": "46",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 400.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.938128
+  },
+  {
+    "partno": "47",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 200.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.692559
+  },
+  {
+    "partno": "48",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 200.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.590935
+  },
+  {
+    "partno": "49",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 300.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.954138
+  },
+  {
+    "partno": "50",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 200.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.21052
+  },
+  {
+    "partno": "51",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 100.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.240686
+  },
+  {
+    "partno": "52",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 500.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.773834
+  },
+  {
+    "partno": "53",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 200.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.665875
+  },
+  {
+    "partno": "54",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 500.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.034056
+  },
+  {
+    "partno": "55",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 300.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.258743
+  },
+  {
+    "partno": "56",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 500.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.657774
+  },
+  {
+    "partno": "57",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 100.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.657946
+  },
+  {
+    "partno": "58",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 500.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.40828
+  },
+  {
+    "partno": "59",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 400.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.692887
+  },
+  {
+    "partno": "60",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 500.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.051474
+  },
+  {
+    "partno": "61",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 300.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.744545
+  },
+  {
+    "partno": "62",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 200.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.154757
+  },
+  {
+    "partno": "63",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 500.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.050596
+  },
+  {
+    "partno": "64",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 200.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.380394
+  },
+  {
+    "partno": "65",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 100.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.563691
+  },
+  {
+    "partno": "66",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 500.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.846501
+  },
+  {
+    "partno": "67",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 500.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.80091
+  },
+  {
+    "partno": "68",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 500.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.471822
+  },
+  {
+    "partno": "69",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 100.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.702667
+  },
+  {
+    "partno": "70",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 300.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.99805
+  },
+  {
+    "partno": "71",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 100.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.122844
+  },
+  {
+    "partno": "72",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 300.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.127977
+  },
+  {
+    "partno": "73",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 100.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.305921
+  },
+  {
+    "partno": "74",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 500.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.005793
+  },
+  {
+    "partno": "75",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 400.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.049395
+  },
+  {
+    "partno": "76",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 100.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.862184
+  },
+  {
+    "partno": "77",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 100.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.778473
+  },
+  {
+    "partno": "78",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 300.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.894274
+  },
+  {
+    "partno": "79",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 300.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.960697
+  },
+  {
+    "partno": "80",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 300.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.076559
+  },
+  {
+    "partno": "81",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 500.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.994738
+  },
+  {
+    "partno": "82",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 400.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.182632
+  },
+  {
+    "partno": "83",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 100.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.974536
+  },
+  {
+    "partno": "84",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 500.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.006118
+  },
+  {
+    "partno": "85",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 300.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.194717
+  },
+  {
+    "partno": "86",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 300.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.536228
+  },
+  {
+    "partno": "87",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 200.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.731538
+  },
+  {
+    "partno": "88",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 400.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.189736
+  },
+  {
+    "partno": "89",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 500.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.557988
+  },
+  {
+    "partno": "90",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 300.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.288517
+  },
+  {
+    "partno": "91",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 500.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.212157
+  },
+  {
+    "partno": "92",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 500.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.19782
+  },
+  {
+    "partno": "93",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 300.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.458545
+  },
+  {
+    "partno": "94",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 300.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.281079
+  },
+  {
+    "partno": "95",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 100.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.151492
+  },
+  {
+    "partno": "96",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 400.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.06155
+  },
+  {
+    "partno": "97",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 400.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.806859
+  },
+  {
+    "partno": "98",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 400.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.873787
+  },
+  {
+    "partno": "99",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 500.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.59077
+  },
+  {
+    "partno": "100",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 100.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.285447
+  },
+  {
+    "partno": "101",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 400.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.869175
+  },
+  {
+    "partno": "102",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 400.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.574009
+  },
+  {
+    "partno": "103",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 400.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.664611
+  },
+  {
+    "partno": "104",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 300.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.690359
+  },
+  {
+    "partno": "105",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 400.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.114082
+  },
+  {
+    "partno": "106",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 300.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.985396
+  },
+  {
+    "partno": "107",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 300.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.569777
+  },
+  {
+    "partno": "108",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 500.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.504463
+  },
+  {
+    "partno": "109",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 200.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.763734
+  },
+  {
+    "partno": "110",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 400.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.870484
+  },
+  {
+    "partno": "111",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 500.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.047952
+  },
+  {
+    "partno": "112",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 300.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.272064
+  },
+  {
+    "partno": "113",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 200.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.361838
+  },
+  {
+    "partno": "114",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 500.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.256467
+  },
+  {
+    "partno": "115",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 400.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.069894
+  },
+  {
+    "partno": "116",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 200.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.107487
+  },
+  {
+    "partno": "117",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 100.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.503929
+  },
+  {
+    "partno": "118",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 400.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.190139
+  },
+  {
+    "partno": "119",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 500.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.023641
+  },
+  {
+    "partno": "120",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 100.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.301416
+  },
+  {
+    "partno": "121",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 200.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.641652
+  },
+  {
+    "partno": "122",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 100.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.165494
+  },
+  {
+    "partno": "123",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 300.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.746756
+  },
+  {
+    "partno": "124",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 300.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.367826
+  },
+  {
+    "partno": "125",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 500.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.610701
+  },
+  {
+    "partno": "126",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 300.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.87428
+  },
+  {
+    "partno": "127",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 500.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.179705
+  },
+  {
+    "partno": "128",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 300.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.418962
+  },
+  {
+    "partno": "129",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 400.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.277247
+  },
+  {
+    "partno": "130",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 300.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.143991
+  },
+  {
+    "partno": "131",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 500.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.846481
+  },
+  {
+    "partno": "132",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 400.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.15267
+  },
+  {
+    "partno": "133",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 400.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.716877
+  },
+  {
+    "partno": "134",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 200.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.504233
+  },
+  {
+    "partno": "135",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 300.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.764442
+  },
+  {
+    "partno": "136",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 200.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.891223
+  },
+  {
+    "partno": "137",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 400.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.439455
+  },
+  {
+    "partno": "138",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 200.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.713075
+  },
+  {
+    "partno": "139",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 500.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.259333
+  },
+  {
+    "partno": "140",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 100.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.0728
+  },
+  {
+    "partno": "141",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 300.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.401644
+  },
+  {
+    "partno": "142",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 100.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.511994
+  },
+  {
+    "partno": "143",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 100.0,
+    "height": 300.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.183318
+  },
+  {
+    "partno": "144",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 400.0,
+    "height": 400.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.244438
+  },
+  {
+    "partno": "145",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 200.0,
+    "depth": 400.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.673947
+  },
+  {
+    "partno": "146",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 400.0,
+    "depth": 500.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.150321
+  },
+  {
+    "partno": "147",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 300.0,
+    "height": 100.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.021607
+  },
+  {
+    "partno": "148",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 500.0,
+    "height": 100.0,
+    "depth": 300.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.232018
+  },
+  {
+    "partno": "149",
+    "name": "",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "width": 200.0,
+    "height": 300.0,
+    "depth": 200.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "density": 0.588638
+  }
+]

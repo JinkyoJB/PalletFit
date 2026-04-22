@@ -1,0 +1,402 @@
+[
+    {
+        "partno": "0",
+        "name": "item_0",
+        "objshape": "cube",
+        "width": 800,
+        "height": 150,
+        "depth": 200,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            0,
+            0,
+            0
+        ]
+    },
+    {
+        "partno": "1",
+        "name": "item_1",
+        "objshape": "cube",
+        "width": 200,
+        "height": 450,
+        "depth": 100,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            0,
+            150,
+            0
+        ]
+    },
+    {
+        "partno": "2",
+        "name": "item_2",
+        "objshape": "cube",
+        "width": 400,
+        "height": 150,
+        "depth": 100,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            200,
+            150,
+            0
+        ]
+    },
+    {
+        "partno": "3",
+        "name": "item_3",
+        "objshape": "cube",
+        "width": 200,
+        "height": 150,
+        "depth": 300,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            600,
+            150,
+            0
+        ]
+    },
+    {
+        "partno": "4",
+        "name": "item_4",
+        "objshape": "cube",
+        "width": 600,
+        "height": 300,
+        "depth": 100,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            200,
+            300,
+            0
+        ]
+    },
+    {
+        "partno": "5",
+        "name": "item_5",
+        "objshape": "cube",
+        "width": 400,
+        "height": 150,
+        "depth": 200,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            0,
+            150,
+            100
+        ]
+    },
+    {
+        "partno": "6",
+        "name": "item_6",
+        "objshape": "cube",
+        "width": 200,
+        "height": 450,
+        "depth": 100,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            400,
+            150,
+            100
+        ]
+    },
+    {
+        "partno": "7",
+        "name": "item_7",
+        "objshape": "cube",
+        "width": 200,
+        "height": 300,
+        "depth": 300,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            0,
+            300,
+            100
+        ]
+    },
+    {
+        "partno": "8",
+        "name": "item_8",
+        "objshape": "cube",
+        "width": 200,
+        "height": 300,
+        "depth": 100,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            200,
+            300,
+            100
+        ]
+    },
+    {
+        "partno": "9",
+        "name": "item_9",
+        "objshape": "cube",
+        "width": 200,
+        "height": 150,
+        "depth": 200,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            600,
+            300,
+            100
+        ]
+    },
+    {
+        "partno": "10",
+        "name": "item_10",
+        "objshape": "cube",
+        "width": 200,
+        "height": 150,
+        "depth": 100,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            600,
+            450,
+            100
+        ]
+    },
+    {
+        "partno": "11",
+        "name": "item_11",
+        "objshape": "cube",
+        "width": 200,
+        "height": 150,
+        "depth": 200,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            0,
+            0,
+            200
+        ]
+    },
+    {
+        "partno": "12",
+        "name": "item_12",
+        "objshape": "cube",
+        "width": 600,
+        "height": 150,
+        "depth": 100,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            200,
+            0,
+            200
+        ]
+    },
+    {
+        "partno": "13",
+        "name": "item_13",
+        "objshape": "cube",
+        "width": 200,
+        "height": 150,
+        "depth": 100,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            400,
+            150,
+            200
+        ]
+    },
+    {
+        "partno": "14",
+        "name": "item_14",
+        "objshape": "cube",
+        "width": 400,
+        "height": 150,
+        "depth": 100,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            200,
+            300,
+            200
+        ]
+    },
+    {
+        "partno": "15",
+        "name": "item_15",
+        "objshape": "cube",
+        "width": 200,
+        "height": 150,
+        "depth": 100,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            200,
+            450,
+            200
+        ]
+    },
+    {
+        "partno": "16",
+        "name": "item_16",
+        "objshape": "cube",
+        "width": 400,
+        "height": 150,
+        "depth": 200,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            400,
+            450,
+            200
+        ]
+    },
+    {
+        "partno": "17",
+        "name": "item_17",
+        "objshape": "cube",
+        "width": 200,
+        "height": 600,
+        "depth": 100,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            200,
+            0,
+            300
+        ]
+    },
+    {
+        "partno": "18",
+        "name": "item_18",
+        "objshape": "cube",
+        "width": 400,
+        "height": 450,
+        "depth": 100,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            400,
+            0,
+            300
+        ]
+    },
+    {
+        "partno": "19",
+        "name": "item_19",
+        "objshape": "cube",
+        "width": 200,
+        "height": 150,
+        "depth": 100,
+        "rotation_quat": 0,
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            0,
+            150,
+            300
+        ]
+    }
+]

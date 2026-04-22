@@ -1,0 +1,77 @@
+[
+    {
+        "partno": "0",
+        "name": "item_0",
+        "objshape": "cube",
+        "width": 50,
+        "height": 50,
+        "depth": 100,
+         "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            0,
+            0,
+            0
+        ]
+    },
+    {
+        "partno": "1",
+        "name": "item_1",
+        "objshape": "cube",
+        "width": 100,
+        "height": 100,
+        "depth": 100,
+         "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            0,
+            112,
+            0
+        ]
+    },
+    {
+        "partno": "2",
+        "name": "item_2",
+        "objshape": "cube",
+        "width": 200,
+        "height": 100,
+        "depth": 100,
+         "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+        "priority": 7,
+        "updown": false,
+        "color": "#14ba5e",
+        "weight": 0,
+        "loadbear": 0,
+        "unit": "mm",
+        "b_position": [
+            112,
+            112,
+            0
+        ]
+    }
+]

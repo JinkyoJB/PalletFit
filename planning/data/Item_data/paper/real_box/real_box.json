@@ -1,0 +1,914 @@
+[
+  {
+    "partno": "0",
+    "name": "franka",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 230.0,
+    "height": 197.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "1",
+    "name": "box4u_big",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 297.0,
+    "height": 204.0,
+    "depth": 152.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "2",
+    "name": "box4u_big",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 297.0,
+    "height": 204.0,
+    "depth": 152.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "3",
+    "name": "omron",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 98.0,
+    "height": 116.0,
+    "depth": 60.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "4",
+    "name": "omron",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 98.0,
+    "height": 116.0,
+    "depth": 60.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "5",
+    "name": "omron",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 98.0,
+    "height": 116.0,
+    "depth": 60.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "6",
+    "name": "LSis",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 120.0,
+    "height": 90.0,
+    "depth": 110.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "7",
+    "name": "SLAMTEX",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 123.0,
+    "height": 120.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "8",
+    "name": "SLAMTEX",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 123.0,
+    "height": 120.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "9",
+    "name": "box8",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 82.0,
+    "height": 80.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "10",
+    "name": "box8",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 82.0,
+    "height": 80.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "11",
+    "name": "box8",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 82.0,
+    "height": 80.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "12",
+    "name": "box4u211",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 200.0,
+    "height": 100.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "13",
+    "name": "box4u211",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 200.0,
+    "height": 100.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "14",
+    "name": "box4u211",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 200.0,
+    "height": 100.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "15",
+    "name": "box4u211",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 200.0,
+    "height": 100.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "16",
+    "name": "cube9",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 92.0,
+    "height": 92.0,
+    "depth": 90.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "17",
+    "name": "IOLINK",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 107.0,
+    "height": 85.0,
+    "depth": 50.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "18",
+    "name": "Gemini336",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 150.0,
+    "height": 100.0,
+    "depth": 50.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "19",
+    "name": "LSElectric_mc",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 83.0,
+    "height": 47.0,
+    "depth": 90.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "20",
+    "name": "LSElectric_ABS",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 100.0,
+    "height": 100.0,
+    "depth": 90.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "18",
+    "name": "Gemini336",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 150.0,
+    "height": 100.0,
+    "depth": 50.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "20",
+    "name": "LSElectric_ABS",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 100.0,
+    "height": 100.0,
+    "depth": 90.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "21",
+    "name": "box_cumstom",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 160.0,
+    "height": 80.0,
+    "depth": 105.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "22",
+    "name": "해인전자",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 126.0,
+    "height": 160.0,
+    "depth": 105.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "23",
+    "name": "box4u2",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 200.0,
+    "height": 196.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "23",
+    "name": "box4u2",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 205.0,
+    "height": 196.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "24",
+    "name": "box4u2",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 205.0,
+    "height": 196.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "25",
+    "name": "LIVOX",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 142.0,
+    "height": 142.0,
+    "depth": 30.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "26",
+    "name": "SICK",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 182.0,
+    "height": 180.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "27",
+    "name": "misumi",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 230.0,
+    "height": 170.0,
+    "depth": 95.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "28",
+    "name": "misumi",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 230.0,
+    "height": 170.0,
+    "depth": 95.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "29",
+    "name": "해인전자L",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 212.0,
+    "height": 140.0,
+    "depth": 110.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "30",
+    "name": "white_cube",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 155.0,
+    "height": 160.0,
+    "depth": 95.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "31",
+    "name": "에스케센서",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 195.0,
+    "height": 127.0,
+    "depth": 110.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "32",
+    "name": "STLab",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 230.0,
+    "height": 155.0,
+    "depth": 55.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "33",
+    "name": "D-50",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width": 220.0,
+    "height": 134.0,
+    "depth": 50.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "34",
+    "name": "box4u-150",
+    "objshape": "cube",
+    "priority": 1,
+    "updown": false,
+    "weight": 0.84,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "width" :155.0,
+    "height": 165.0,
+    "depth": 100.0,
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  }
+]

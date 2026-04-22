@@ -1,0 +1,626 @@
+[
+  {
+    "partno": "1",
+    "name": "box4u_big",
+    "objshape": "cube",
+    "width": 297.0,
+    "height": 204.0,
+    "depth": 152.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 1.84,
+    "loadbear": 12.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "2",
+    "name": "SLAMTEX",
+    "objshape": "cube",
+    "width": 123.0,
+    "height": 120.0,
+    "depth": 100.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.7071068,
+      0.7071068
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.3,
+    "loadbear": 3.0,
+    "unit": "mm",
+    "b_position": [
+      305.0,
+      220.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "0",
+    "name": "item_0",
+    "objshape": "cube",
+    "width": 216.0,
+    "height": 158.0,
+    "depth": 94.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.7071068,
+      0.7071068
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.64,
+    "loadbear": 7.0,
+    "unit": "mm",
+    "b_position": [
+      313.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "1",
+    "name": "box4u_big",
+    "objshape": "cube",
+    "width": 297.0,
+    "height": 204.0,
+    "depth": 152.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 1.84,
+    "loadbear": 12.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      212.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "0",
+    "name": "misumi",
+    "objshape": "cube",
+    "width": 230.0,
+    "height": 170.0,
+    "depth": 95.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.74,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      8.0,
+      152.0
+    ]
+  },
+  {
+    "partno": "0",
+    "name": "item_0",
+    "objshape": "cube",
+    "width": 171.0,
+    "height": 168.0,
+    "depth": 99.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.7071068,
+      0.7071068
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.57,
+    "loadbear": 6.0,
+    "unit": "mm",
+    "b_position": [
+      305.0,
+      8.0,
+      94.0
+    ]
+  },
+  {
+    "partno": "1",
+    "name": "box4u_big",
+    "objshape": "cube",
+    "width": 297.0,
+    "height": 204.0,
+    "depth": 152.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 1.84,
+    "loadbear": 12.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      186.0,
+      152.0
+    ]
+  },
+  {
+    "partno": "1",
+    "name": "franka",
+    "objshape": "cube",
+    "width": 230.0,
+    "height": 197.0,
+    "depth": 100.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.91,
+    "loadbear": 9.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      194.0,
+      304.0
+    ]
+  },
+  {
+    "partno": "1",
+    "name": "에스케센서",
+    "objshape": "cube",
+    "width": 195.0,
+    "height": 127.0,
+    "depth": 110.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.54,
+    "loadbear": 5.0,
+    "unit": "mm",
+    "b_position": [
+      305.0,
+      351.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "2",
+    "name": "SLAMTEX",
+    "objshape": "cube",
+    "width": 123.0,
+    "height": 120.0,
+    "depth": 100.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.7071068,
+      0.7071068
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.3,
+    "loadbear": 3.0,
+    "unit": "mm",
+    "b_position": [
+      305.0,
+      228.0,
+      100.0
+    ]
+  },
+  {
+    "partno": "1",
+    "name": "에스케센서",
+    "objshape": "cube",
+    "width": 195.0,
+    "height": 127.0,
+    "depth": 110.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.54,
+    "loadbear": 5.0,
+    "unit": "mm",
+    "b_position": [
+      305.0,
+      359.0,
+      110.0
+    ]
+  },
+  {
+    "partno": "1",
+    "name": "box4u211",
+    "objshape": "cube",
+    "width": 200.0,
+    "height": 100.0,
+    "depth": 100.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.4,
+    "loadbear": 4.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      16.0,
+      247.0
+    ]
+  },
+  {
+    "partno": "1",
+    "name": "box4u211",
+    "objshape": "cube",
+    "width": 200.0,
+    "height": 100.0,
+    "depth": 100.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.4,
+    "loadbear": 4.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      8.0,
+      347.0
+    ]
+  },
+  {
+    "partno": "2",
+    "name": "해인전자",
+    "objshape": "cube",
+    "width": 160.0,
+    "height": 126.0,
+    "depth": 105.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.42,
+    "loadbear": 4.0,
+    "unit": "mm",
+    "b_position": [
+      305.0,
+      367.0,
+      220.0
+    ]
+  },
+  {
+    "partno": "2",
+    "name": "Gemini336",
+    "objshape": "cube",
+    "width": 150.0,
+    "height": 100.0,
+    "depth": 50.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.15,
+    "loadbear": 3.0,
+    "unit": "mm",
+    "b_position": [
+      305.0,
+      236.0,
+      200.0
+    ]
+  },
+  {
+    "partno": "2",
+    "name": "LSis",
+    "objshape": "cube",
+    "width": 120.0,
+    "height": 90.0,
+    "depth": 110.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.7071068,
+      0.7071068
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.24,
+    "loadbear": 2.0,
+    "unit": "mm",
+    "b_position": [
+      305.0,
+      244.0,
+      250.0
+    ]
+  },
+  {
+    "partno": "2",
+    "name": "Gemini336",
+    "objshape": "cube",
+    "width": 150.0,
+    "height": 100.0,
+    "depth": 50.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.15,
+    "loadbear": 3.0,
+    "unit": "mm",
+    "b_position": [
+      313.0,
+      372.0,
+      325.0
+    ]
+  },
+  {
+    "partno": "2",
+    "name": "item_2",
+    "objshape": "cube",
+    "width": 116.982,
+    "height": 87.146,
+    "depth": 68.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.14,
+    "loadbear": 2.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      202.0,
+      404.0
+    ]
+  },
+  {
+    "partno": "2",
+    "name": "item_2",
+    "objshape": "cube",
+    "width": 72.932,
+    "height": 71.196,
+    "depth": 103.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.11,
+    "loadbear": 1.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      424.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "2",
+    "name": "IOLINK",
+    "objshape": "cube",
+    "width": 107.0,
+    "height": 85.0,
+    "depth": 50.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.09,
+    "loadbear": 2.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      297.15,
+      404.0
+    ]
+  },
+  {
+    "partno": "2",
+    "name": "item_2",
+    "objshape": "cube",
+    "width": 95.0,
+    "height": 84.0,
+    "depth": 54.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.7071068,
+      0.7071068
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.09,
+    "loadbear": 2.0,
+    "unit": "mm",
+    "b_position": [
+      124.98,
+      210.0,
+      404.0
+    ]
+  },
+  {
+    "partno": "2",
+    "name": "omron",
+    "objshape": "cube",
+    "width": 116.0,
+    "height": 98.0,
+    "depth": 60.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.14,
+    "loadbear": 2.0,
+    "unit": "mm",
+    "b_position": [
+      115.0,
+      313.0,
+      404.0
+    ]
+  },
+  {
+    "partno": "2",
+    "name": "box8",
+    "objshape": "cube",
+    "width": 82.0,
+    "height": 80.0,
+    "depth": 100.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.13,
+    "loadbear": 1.0,
+    "unit": "mm",
+    "b_position": [
+      123.0,
+      419.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "0",
+    "name": "item_0",
+    "objshape": "cube",
+    "width": 154.012,
+    "height": 56.889,
+    "depth": 105.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.18,
+    "loadbear": 2.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      124.0,
+      247.0
+    ]
+  },
+  {
+    "partno": "1",
+    "name": "IOLINK",
+    "objshape": "cube",
+    "width": 107.0,
+    "height": 85.0,
+    "depth": 50.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.09,
+    "loadbear": 2.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      16.0,
+      447.0
+    ]
+  },
+  {
+    "partno": "1",
+    "name": "IOLINK",
+    "objshape": "cube",
+    "width": 107.0,
+    "height": 85.0,
+    "depth": 50.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.7071068,
+      0.7071068
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.09,
+    "loadbear": 2.0,
+    "unit": "mm",
+    "b_position": [
+      115.0,
+      8.0,
+      447.0
+    ]
+  }
+]

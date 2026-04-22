@@ -1,0 +1,242 @@
+[
+  {
+    "partno": "1",
+    "name": "box4u_big",
+    "objshape": "cube",
+    "width": 297.0,
+    "height": 204.0,
+    "depth": 152.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 1.84,
+    "loadbear": 12.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "2",
+    "name": "box4u211",
+    "objshape": "cube",
+    "width": 200.0,
+    "height": 100.0,
+    "depth": 100.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.7071068,
+      0.7071068
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.4,
+    "loadbear": 4.0,
+    "unit": "mm",
+    "b_position": [
+      305.0,
+      228.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "1",
+    "name": "box4u_big",
+    "objshape": "cube",
+    "width": 297.0,
+    "height": 204.0,
+    "depth": 152.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 1.84,
+    "loadbear": 12.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      212.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "0",
+    "name": "misumi",
+    "objshape": "cube",
+    "width": 230.0,
+    "height": 170.0,
+    "depth": 95.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.74,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      8.0,
+      152.0
+    ]
+  },
+  {
+    "partno": "0",
+    "name": "misumi",
+    "objshape": "cube",
+    "width": 230.0,
+    "height": 170.0,
+    "depth": 95.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.74,
+    "loadbear": 8.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      16.0,
+      247.0
+    ]
+  },
+  {
+    "partno": "0",
+    "name": "에스케센서",
+    "objshape": "cube",
+    "width": 195.0,
+    "height": 127.0,
+    "depth": 110.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.7071068,
+      0.7071068
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.54,
+    "loadbear": 5.0,
+    "unit": "mm",
+    "b_position": [
+      305.0,
+      8.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "2",
+    "name": "box4u211",
+    "objshape": "cube",
+    "width": 200.0,
+    "height": 100.0,
+    "depth": 100.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.7071068,
+      0.7071068
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.4,
+    "loadbear": 4.0,
+    "unit": "mm",
+    "b_position": [
+      305.0,
+      236.0,
+      100.0
+    ]
+  },
+  {
+    "partno": "1",
+    "name": "franka",
+    "objshape": "cube",
+    "width": 230.0,
+    "height": 197.0,
+    "depth": 100.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.91,
+    "loadbear": 9.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      186.0,
+      152.0
+    ]
+  },
+  {
+    "partno": "0",
+    "name": "에스케센서",
+    "objshape": "cube",
+    "width": 195.0,
+    "height": 127.0,
+    "depth": 110.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.54,
+    "loadbear": 5.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      194.0,
+      252.0
+    ]
+  },
+  {
+    "partno": "2",
+    "name": "box_cumstom",
+    "objshape": "cube",
+    "width": 160.0,
+    "height": 80.0,
+    "depth": 105.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.7071068,
+      0.7071068
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.27,
+    "loadbear": 3.0,
+    "unit": "mm",
+    "b_position": [
+      413.0,
+      211.0,
+      0.0
+    ]
+  }
+]

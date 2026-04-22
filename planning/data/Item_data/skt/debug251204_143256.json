@@ -1,0 +1,122 @@
+[
+  {
+    "partno": "1",
+    "name": "box4u_big",
+    "objshape": "cube",
+    "width": 297.0,
+    "height": 204.0,
+    "depth": 152.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 1.84,
+    "loadbear": 12.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "0",
+    "name": "franka",
+    "objshape": "cube",
+    "width": 230.0,
+    "height": 197.0,
+    "depth": 100.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.7071068,
+      0.7071068
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.91,
+    "loadbear": 9.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      214.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "2",
+    "name": "item_2",
+    "objshape": "cube",
+    "width": 223.625,
+    "height": 159.898,
+    "depth": 89.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 0.64,
+    "loadbear": 7.0,
+    "unit": "mm",
+    "b_position": [
+      207.0,
+      224.0,
+      0.0
+    ]
+  },
+  {
+    "partno": "1",
+    "name": "box4u_big",
+    "objshape": "cube",
+    "width": 297.0,
+    "height": 204.0,
+    "depth": 152.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 1.84,
+    "loadbear": 12.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      10.0,
+      152.0
+    ]
+  },
+  {
+    "partno": "1",
+    "name": "box4u_big",
+    "objshape": "cube",
+    "width": 297.0,
+    "height": 204.0,
+    "depth": 152.0,
+    "rotation_quat": [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ],
+    "priority": 1,
+    "updown": false,
+    "weight": 1.84,
+    "loadbear": 12.0,
+    "unit": "mm",
+    "b_position": [
+      0.0,
+      20.0,
+      304.0
+    ]
+  }
+]

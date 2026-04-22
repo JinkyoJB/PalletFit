@@ -1,0 +1,26 @@
+[
+    {
+        "partno": "2",
+        "name": "white_cube",
+        "objshape": "cube",
+        "width": 160.0,
+        "height": 155.0,
+        "depth": 95.0,
+        "rotation_quat": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+        ],
+        "priority": 1,
+        "updown": false,
+        "weight": 0.47,
+        "loadbear": 496.0,
+        "unit": "mm",
+        "b_position": [
+            0.0,
+            214.0,
+            245.0
+        ]
+    }
+]

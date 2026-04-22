@@ -1,0 +1,59 @@
+[
+    { "partno": "1",  "name": "Box150x150x150",  "objshape": "cube", "width": 150, "height": 150, "depth": 150, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "2",  "name": "Box150x150x300",  "objshape": "cube", "width": 150, "height": 300, "depth": 150, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+  
+    { "partno": "3",  "name": "Box200x150x100",  "objshape": "cube", "width": 200, "height": 100, "depth": 150, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "4",  "name": "Box200x150x200",  "objshape": "cube", "width": 200, "height": 200, "depth": 150, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "5",  "name": "Box200x150x300",  "objshape": "cube", "width": 200, "height": 300, "depth": 150, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+  
+    { "partno": "6",  "name": "Box250x200x150",  "objshape": "cube", "width": 250, "height": 150, "depth": 200, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "7",  "name": "Box250x200x250",  "objshape": "cube", "width": 250, "height": 250, "depth": 200, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+  
+    { "partno": "8",  "name": "Box300x200x150",  "objshape": "cube", "width": 300, "height": 150, "depth": 200, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "9",  "name": "Box300x200x250",  "objshape": "cube", "width": 300, "height": 250, "depth": 200, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "10", "name": "Box350x300x250",  "objshape": "cube", "width": 350, "height": 300, "depth": 200, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+  
+    { "partno": "11", "name": "Box350x250x150",  "objshape": "cube", "width": 350, "height": 150, "depth": 250, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "12", "name": "Box350x250x300",  "objshape": "cube", "width": 350, "height": 300, "depth": 250, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "13", "name": "Box350x250x450",  "objshape": "cube", "width": 350, "height": 450, "depth": 250, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+  
+    { "partno": "14", "name": "OCS-1",           "objshape": "cube", "width": 400, "height": 100, "depth": 300, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "15", "name": "OCS-2",           "objshape": "cube", "width": 400, "height": 200, "depth": 300, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "16", "name": "OCS-3",           "objshape": "cube", "width": 400, "height": 400, "depth": 300, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+  
+    { "partno": "17", "name": "Box450x350x200",  "objshape": "cube", "width": 450, "height": 200, "depth": 350, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "18", "name": "Box450x350x400",  "objshape": "cube", "width": 450, "height": 400, "depth": 350, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+  
+    { "partno": "19", "name": "Box500x400x200",  "objshape": "cube", "width": 500, "height": 200, "depth": 400, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "20", "name": "Box500x400x300",  "objshape": "cube", "width": 500, "height": 300, "depth": 400, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "21", "name": "Box500x400x500",  "objshape": "cube", "width": 500, "height": 500, "depth": 400, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+  
+    { "partno": "22", "name": "ISO-600x400x150", "objshape": "cube", "width": 600, "height": 150, "depth": 400, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "23", "name": "ISO-600x400x200", "objshape": "cube", "width": 600, "height": 200, "depth": 400, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "24", "name": "ISO-600x400x400", "objshape": "cube", "width": 600, "height": 400, "depth": 400, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "25", "name": "ISO-600x400x600", "objshape": "cube", "width": 600, "height": 600, "depth": 400, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+  
+    { "partno": "26", "name": "Box700x450x200",  "objshape": "cube", "width": 700, "height": 200, "depth": 450, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "27", "name": "OCS-6",           "objshape": "cube", "width": 700, "height": 250, "depth": 450, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "28", "name": "OCS-7",           "objshape": "cube", "width": 700, "height": 500, "depth": 450, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+  
+    { "partno": "29", "name": "Box800x500x150",  "objshape": "cube", "width": 800, "height": 150, "depth": 500, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "30", "name": "Box800x500x300",  "objshape": "cube", "width": 800, "height": 300, "depth": 500, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "31", "name": "Box800x500x500",  "objshape": "cube", "width": 800, "height": 500, "depth": 500, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+  
+    { "partno": "39", "name": "Box550x350x250",  "objshape": "cube", "width": 550, "height": 250, "depth": 350, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "40", "name": "Box650x450x350",  "objshape": "cube", "width": 650, "height": 350, "depth": 450, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+  
+    { "partno": "41", "name": "Box300x300x600",  "objshape": "cube", "width": 300, "height": 600, "depth": 300, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "42", "name": "Box400x400x600",  "objshape": "cube", "width": 400, "height": 600, "depth": 400, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+  
+    { "partno": "43", "name": "Box500x500x300",  "objshape": "cube", "width": 500, "height": 500, "depth": 300, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "44", "name": "Box500x500x600",  "objshape": "cube", "width": 500, "height": 500, "depth": 600, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+  
+    { "partno": "45", "name": "Box500x250x250",  "objshape": "cube", "width": 500, "height": 250, "depth": 250, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "46", "name": "Box450x450x450",  "objshape": "cube", "width": 450, "height": 450, "depth": 450, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+  
+    { "partno": "47", "name": "Box600x300x300",  "objshape": "cube", "width": 600, "height": 300, "depth": 300, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] },
+    { "partno": "48", "name": "Box600x500x300",  "objshape": "cube", "width": 600, "height": 500, "depth": 300, "rotation_quat": [0,0,0,1], "priority": 1, "updown": false, "weight": 0, "loadbear": 0, "unit": "mm", "b_position": [0,0,0] }
+  ]
+  

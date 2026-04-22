@@ -1,0 +1,1782 @@
+# planning/RL/PalletFit_RL/agent.py
+from __future__ import annotations
+from dataclasses import dataclass, asdict, field
+from typing import Optional, Dict, List, Callable, Any
+import os, datetime, shutil, csv
+from pathlib import Path
+import numpy as np
+import torch as th
+import datetime 
+
+try:
+    # 확률 합이 0.9999999 등이 나와도 에러내지 않도록 설정
+    th.distributions.Distribution.set_default_validate_args(False)
+    print("✅ PyTorch Distribution Validation disabled (Prevents Simplex Error)")
+except Exception as e:
+    print(f"⚠️ Failed to disable validation: {e}")
+
+# =============================================================================
+from collections import defaultdict
+
+from torch.utils.tensorboard import SummaryWriter
+
+# SB3 / contrib
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import DummyVecEnv, VecMonitor, VecEnv, SubprocVecEnv
+from stable_baselines3.common.callbacks import BaseCallback, CallbackList, CheckpointCallback, EveryNTimesteps
+from stable_baselines3.common.logger import configure
+from sb3_contrib.ppo_mask import MaskablePPO
+from sb3_contrib.common.maskable.utils import get_action_masks
+
+# ── 우리의 환경 (생성자는 seed, tb_log_dir만 받는 걸로 가정) ─────────────
+from planning.RL.PalletFit_RL.env import PalletFitEnv
+from planning.RL.PalletFit_RL.custom_value_policy import PointerPolicyFT, CustomCombinedExtractor
+from planning.RL.PalletFit_RL.config import ACTION_MAX_CANDIDATES, PREVIEW_MAX
+
+from planning.RL.PalletFit_RL.obs_builder import build_observation_deque, queue_head
+from planning.RL.PalletFit_RL.act_builder import rebuild_candidates, place_by_action
+from planning.itemManager import global_item_manager
+from planning.packer import Packer
+from planning.item import RotationType
+from collections import deque
+import random
+from planning.RL.PalletFit_RL.env import _generate_items_with_tsg, TSGConfig
+# =============================================================================
+# 0) 설정
+# =============================================================================
+
+# 예시: 가장 잘 풀리고 데이터가 깔끔한 파일 하나 지정
+OVERFIT_TARGET_PATH = "planning/data/Item_data/paper/testset/dataset_episode_012.json"
+
+
+@dataclass
+class AgentConfig:
+    device: str = "cuda" if th.cuda.is_available() else "cpu"
+    seed: int = 1456
+    total_timesteps: int = 20_000_000
+
+    # PPO 핵심
+    gamma: float = 0.999
+    n_steps: int = 128         # rollout steps per env
+    batch_size: int = 256
+
+    ent_coef: float = 0.03
+    vf_coef: float = 0.5
+    clip_range: float = 0.3 
+    learning_rate: float = 3e-4
+
+    # 벡터 환경
+    n_envs_train: int = 24
+    n_envs_eval: int = 5
+
+    # 주기(롤아웃 단위) 저장/평가
+    eval_every_rollouts: int = 12
+    save_every_rollouts: int = 12
+
+    # ── 데이터 스케줄링 옵션 ─────────────────────────────────────
+    # 1) 시간(샘플수) 기반 경계: total_timesteps 대비 비율
+    bootstrap_ratio: float = 0.10   
+    mid_ratio: float       = 0.60
+
+    # 2) 리허설(offline 고정 시나리오 유지학습) 비율: 페이즈별
+    rehearsal_p_boot: float = 0.10
+    rehearsal_p_mid:  float = 0.15
+    rehearsal_p_late: float = 0.20
+    # 3) 랜덤형 내부 비율
+    online_type_ratio: float = 1.0   # online_type : tsg = 0.7 : 0.3
+    tsg_ratio:         float = 0.0
+
+    # # 오프라인 리허설(offline) 완전 차단
+    # rehearsal_p_boot=0.0
+    # rehearsal_p_mid=0.0
+    # rehearsal_p_late=0.0
+    # # online_type:tsg 비율을 0:1로
+    # online_type_ratio=0.0
+    # tsg_ratio=1.0
+
+    # 4) 성능 기반(Adaptive)도 켜고 싶을 때
+    use_adaptive_phase: bool = False      # True면 성능기반 상향 허용(하이브리드)
+
+    perf_window: int = 4                  # 최근 평가 W
+    perf_eps_slope: float = 1e-3          # 증가량 임계
+    perf_eps_std: float = 1e-2            # 분산 임계
+    perf_min_eval_gap: int = 2            # 페이즈 전환 최소 평가 간격
+
+    # ── 오프라인 소스 선택용 옵션 ──────────────────────────────
+    # 사용자가 직접 경로 풀을 지정할 수 있게 (폴더/파일 혼합 가능)
+    # offline_item_paths_pool: Optional[List[str]] = None
+    offline_item_paths_pool=[
+            "planning/data/Item_data/paper/setting123_discrete",
+            "planning/data/Item_data/paper_drl/rs",
+            'planning/data/Item_data/paper/testset'
+        ]
+    # [선택] 각 경로에 대한 가중치. None이면 자동으로 폴더 내 JSON 개수 비례로 계산
+    # offline_item_paths_weights: Optional[List[float]] = None
+    offline_item_paths_weights=[0.3, 0.3, 0.4]
+
+    # 자동 가중치 계산을 켤지 여부 (weights가 None일 때만 의미 있음)
+    offline_auto_weight_by_len: bool = True
+    # 평가용 오프라인 소스 (None이면 기본값 사용)
+    # eval_item_paths_pool: Optional[List[str]] = None
+    eval_item_paths_pool=[
+            OVERFIT_TARGET_PATH,
+            'planning/data/Item_data/paper/testset/dataset_episode_653.json',
+            'planning/data/Item_data/paper/testset/dataset_episode_2731.json',
+            'planning/data/Item_data/paper/testset/dataset_episode_1623.json',
+            'planning/data/Item_data/paper/testset/dataset_episode_2999.json'
+        ]
+    # ── 액션 후보/선택 개수 튜닝 ────────────────────────────────
+    preview_cnt_choices:     List[int] = field(default_factory=lambda: [1,2,3,4,5])
+
+# =============================================================================
+# 1) Trainset Plan & Plan maker
+# =============================================================================
+@dataclass
+class EnvPlan:
+    # 에피소드 재현용 시드 (episode_seed로 들어감)
+    seed: int
+
+    # env 레벨 설정
+    max_steps_per_episode: int = 200
+    
+    # [수정] 기존 두 변수 삭제 -> preview_cnt로 통합
+    # 기본값은 config의 PREVIEW_MAX (5)로 설정
+    preview_cnt: int = PREVIEW_MAX  
+
+    # 메타
+    mode: str = "train"         # "train" | "eval" (태그용)
+
+    # 아이템 로딩 쪽
+    item_mode: str = "offline"  # "offline" | "online_type" | "tsg"
+    item_payload: Dict[str, Any] = field(default_factory=dict)
+
+    # bin 쪽
+    bin_alias: str = "experiment_RL"   # BinSpecsDict 키
+    bin_margin_x: int = 0
+    bin_margin_y: int = 0
+    bin_payload: Dict[str, Any] = field(default_factory=dict)
+
+# 공통 경로(프로젝트 상황에 맞게 수정)
+OFFLINE_PATHS = [
+    "planning/data/Item_data/exhibition",
+    "planning/data/Item_data/paper/setting123_discrete",
+]
+ONLINE_TYPE_PATHS = [
+"planning/data/Item_data/paper/real_box/real_box.json"
+]
+DEFAULT_TSG_CFG = dict(init_slice=(4, 4, 2), min_item_mm=100)
+
+def env_plan_to_payload(p: EnvPlan) -> Dict[str, Any]:
+    # 1) item_payload 복사 + 보정
+    item_payload = dict(p.item_payload or {})
+
+    # seed → episode_seed로 보강 (없으면)
+    if "episode_seed" not in item_payload:
+        item_payload["episode_seed"] = int(p.seed)
+
+    # train/eval 모드 → tag로 보강 (없으면)
+    if "tag" not in item_payload:
+        item_payload["tag"] = p.mode
+
+    # 2) bin_payload 구성 (EnvPlan 필드 + 사용자 payload 병합)
+    bin_payload = dict(p.bin_payload or {})
+    bin_payload.setdefault("max_steps_per_episode", int(p.max_steps_per_episode))
+    bin_payload.setdefault("margin_x", int(p.bin_margin_x))
+    bin_payload.setdefault("margin_y", int(p.bin_margin_y))
+    
+    # [수정] 통합된 preview_cnt를 payload에 담습니다.
+    bin_payload.setdefault("preview_cnt", int(p.preview_cnt))
+
+    # 3) env가 기대하는 canonical dict로 변환
+    return {
+        "item_mode": p.item_mode,
+        "item_payload": item_payload,
+        "bin": p.bin_alias,
+        "bin_payload": bin_payload,
+    }
+
+def _phase_from_steps(current_steps: int, total_timesteps: int,
+                      bootstrap_ratio: float, mid_ratio: float) -> str:
+    """시간(샘플) 기반 페이즈 판정"""
+    b = int(total_timesteps * bootstrap_ratio)
+    m = int(total_timesteps * mid_ratio)
+    if current_steps < b:
+        return "bootstrap"  # 70:30
+    elif current_steps < m:
+        return "mid"        # 50:50
+    else:
+        return "late"       # 40:60
+
+def _rehearsal_p_from_phase(phase: str, cfg: AgentConfig) -> float:
+    return {
+        "bootstrap": cfg.rehearsal_p_boot,
+        "mid":       cfg.rehearsal_p_mid,
+        "late":      cfg.rehearsal_p_late,
+    }[phase]
+
+def _mix_ratio_from_phase(phase: str) -> tuple[float, float]:
+    """시나리오 고정형 vs 랜덤형 비율"""
+    if phase == "bootstrap":
+        return 0.70, 0.30
+    elif phase == "mid":
+        return 0.50, 0.50
+    else:
+        return 0.40, 0.60
+    
+def _count_json_episodes(p: str) -> int:
+    """폴더면 *.json 개수, 파일이면 확장자 json이면 1, 아니면 0"""
+    path = Path(p)
+    if path.is_dir():
+        return len(list(path.glob("*.json")))
+    if path.is_file() and path.suffix.lower() == ".json":
+        return 1
+    return 0
+
+def _normalize_probs(xs: List[float]) -> List[float]:
+    s = float(sum(max(0.0, x) for x in xs))
+    if s <= 0:
+        n = len(xs)
+        return [1.0 / n] * n if n > 0 else []
+    return [max(0.0, x) / s for x in xs]
+
+def _resolve_offline_pool_and_weights(cfg: AgentConfig) -> tuple[List[str], Optional[List[float]]]:
+    """
+    cfg에서 오프라인 풀/가중치를 가져오되, 없으면 기본 OFFLINE_PATHS 사용.
+    가중치가 없고 offline_auto_weight_by_len=True면 폴더 내 json 개수로 가중치 자동 계산.
+    """
+    pool = list(cfg.offline_item_paths_pool) if cfg.offline_item_paths_pool else list(OFFLINE_PATHS)
+    if not pool:
+        raise ValueError("No offline_item_paths available")
+
+    if cfg.offline_item_paths_weights is not None:
+        # 사용자가 명시한 가중치
+        weights = list(cfg.offline_item_paths_weights)
+        if len(weights) != len(pool):
+            raise ValueError("offline_item_paths_weights length must match offline_item_paths_pool")
+        return pool, weights
+
+    if cfg.offline_auto_weight_by_len:
+        counts = [max(1, _count_json_episodes(p)) for p in pool]  # 최소 1 보장
+        return pool, counts
+
+    # 둘 다 아니면 균등
+    return pool, None
+
+# ---------- (A) 유틸: 폴더/파일 풀을 파일 리스트로 전개 ----------
+def _list_json_files(path: str) -> List[str]:
+    p = Path(path)
+    if p.is_dir():
+        return [str(x) for x in sorted(p.glob("*.json"))]
+    if p.is_file() and p.suffix.lower() == ".json":
+        return [str(p)]
+    return []
+
+def _expand_offline_pool_to_files(pool: List[str]) -> List[str]:
+    files: List[str] = []
+    for p in pool:
+        files.extend(_list_json_files(p))
+    # 중복 제거(같은 파일이 여러 경로에서 들어올 수 있으니)
+    return sorted(list(dict.fromkeys(files)))
+
+# ---------- (B) 폴더 가중치를 파일 가중치로 풀어주기 ----------
+def _distribute_folder_weights_to_files(pool: List[str], folder_weights: Optional[List[float]]) -> Optional[List[float]]:
+    files = _expand_offline_pool_to_files(pool)
+    if not files:
+        return []
+
+    if folder_weights is None:
+        return None  # 균등 샘플링
+
+    # 폴더/파일 혼재: 파일이 속한 폴더 weight를 그 파일들에게 균등 분배
+    folder_to_w = {str(Path(p)): float(w) for p, w in zip(pool, folder_weights)}
+    file_weights: List[float] = []
+    # 폴더별 파일 개수 미리 계산
+    folder_to_files = defaultdict(list)
+    for f in files:
+        folder_to_files[str(Path(f).parent)].append(f)
+
+    for f in files:
+        folder = str(Path(f).parent)
+        fw = float(folder_to_w.get(folder, 0.0))
+        cnt = max(1, len(folder_to_files[folder]))
+        file_weights.append(fw / cnt)
+    return file_weights
+
+# ---------- (C) 히스토리 기반: '안 배운 파일' 우선 선택 ----------
+def _choose_offline_file_with_history(files: List[str], file_weights: Optional[List[float]], history: "DatasetHistory") -> Optional[str]:
+    if not files:
+        return None
+    # 아직 한 번도 안 배운 파일들
+    unseen = [f for f in files if history.offline.get(f, SourceStat()).count == 0]
+    if unseen:
+        # 안 배운 것들 중에서 균등(혹은 파일가중치가 있다면 그 부분집합에 맞춰 선택)
+        if file_weights is None:
+            return str(np.random.choice(unseen))
+        else:
+            # 부분집합에 대한 가중치 재정규화
+            idxs = [files.index(u) for u in unseen]
+            subw = _normalize_probs([file_weights[i] for i in idxs])
+            return unseen[int(np.random.choice(len(unseen), p=subw))]
+    # 전부 배운 적 있으면 가중치/균등으로
+    if file_weights is None:
+        return str(np.random.choice(files))
+    probs = _normalize_probs(file_weights)
+    return files[int(np.random.choice(len(files), p=probs))]
+
+def _make_plans_core(
+    seed: int,
+    n_envs: int,
+    *,
+    p_scenario_fixed: float,
+    p_online_type: float,
+    p_tsg: float,          
+    rehearsal_p: float,
+    rollout_idx: int = 0,
+    bin_key: str = "experiment_RL",
+    margin_range: tuple[int, int] = (0, 8),
+    offline_file_candidates: Optional[List[str]] = None,
+    offline_file_weights: Optional[List[float]] = None,
+    history: Optional["DatasetHistory"] = None,
+    preview_cnt_choices: Optional[List[int]] = None,
+    ) -> List[EnvPlan]:
+    
+    plans: List[EnvPlan] = []
+    files = list(offline_file_candidates or [])
+
+    # [수정] 기본 후보군 설정 (없으면 PREVIEW_MAX 하나만 사용)
+    pc_choices = list(preview_cnt_choices or [PREVIEW_MAX])
+
+    for i in range(n_envs):
+        # 1) preview_cnt 샘플링 (하나로 통합)
+        p_cnt = int(np.random.choice(pc_choices))
+        
+        # 안전 장치: 1 ~ PREVIEW_MAX 사이로 클램핑
+        p_cnt = max(1, min(p_cnt, PREVIEW_MAX))
+
+        # 2) margin 샘플 (기존 동일)
+        mx = int(np.random.randint(*margin_range))
+        my = int(np.random.randint(*margin_range))
+
+        # 3) 이 env 에피소드용 시드 (기존 동일)
+        ep_seed = int(seed + rollout_idx * 10_000 + i)
+
+        # 공통 플랜 생성기
+        def _make_base_plan(item_mode: str, payload: Dict[str, Any], tag: str) -> EnvPlan:
+            pl = dict(payload)
+            pl.setdefault("episode_seed", ep_seed)
+            pl.setdefault("tag", tag)
+
+            return EnvPlan(
+                seed=ep_seed,
+                max_steps_per_episode=200,
+                preview_cnt=p_cnt,
+                mode="train",
+                item_mode=item_mode,
+                item_payload=pl,
+                bin_alias=bin_key,
+                bin_margin_x=mx,
+                bin_margin_y=my,
+                bin_payload={}, 
+            )
+
+        # 4) 리허설 (offline만) - 기존 로직 유지
+        if np.random.rand() < rehearsal_p:
+            chosen = _choose_offline_file_with_history(files, offline_file_weights, history) if history else (
+                files[int(np.random.choice(len(files)))] if files else None
+            )
+            plans.append(_make_base_plan(
+                "offline",
+                {"offline_item_paths": [chosen] if chosen else []},
+                tag="train-rehearsal",
+            ))
+            continue
+
+        # 5) 고정형 vs 랜덤형 - 기존 로직 유지
+        if np.random.rand() < p_scenario_fixed:
+            # 고정 offline
+            chosen = _choose_offline_file_with_history(files, offline_file_weights, history) if history else (
+                files[int(np.random.choice(len(files)))] if files else None
+            )
+            plans.append(_make_base_plan(
+                "offline",
+                {"offline_item_paths": [chosen] if chosen else []},
+                tag="train",
+            ))
+        else:
+            # 랜덤형: online_type vs tsg
+            if np.random.rand() < p_online_type:
+                plans.append(_make_base_plan(
+                    "online_type",
+                    {"online_item_type_path": ONLINE_TYPE_PATHS},
+                    tag="train",
+                ))
+            else:
+                plans.append(_make_base_plan(
+                    "tsg",
+                    {"tsg_cfg": DEFAULT_TSG_CFG},
+                    tag="train",
+                ))
+
+    return plans
+
+def make_time_based_plan_maker(cfg: AgentConfig, history: "DatasetHistory"):
+    def plan_maker(rollout_idx: int, n_envs: int, *, current_steps: int) -> List[EnvPlan]:
+        # 1. 현재 페이즈 확인
+        phase = _phase_from_steps(current_steps, cfg.total_timesteps, cfg.bootstrap_ratio, cfg.mid_ratio)
+        
+        p_scenario_fixed, _ = _mix_ratio_from_phase(phase)
+        rehearsal_p = _rehearsal_p_from_phase(phase, cfg)
+
+        # ────────────────────────────────────────────────────────────────
+        # [수정] 통합된 옵션 설정 (preview_cnt)
+        # ────────────────────────────────────────────────────────────────
+        
+        # 기본값 (Config에서 가져옴)
+        cur_pc_choices = cfg.preview_cnt_choices
+        final_rollout_idx = rollout_idx 
+
+        if phase == "bootstrap":
+            # 1) 파일 1개로 고정
+            offline_files = [OVERFIT_TARGET_PATH] 
+            offline_file_weights = None
+            
+            # 2) 섞기 비율 끄기 (무조건 이 시나리오만)
+            real_p_fixed = 1.0 
+            real_p_online = 0.0
+            real_p_tsg = 0.0
+            
+            # 3) ★ 시드 고정 (문제 순서 고정)
+            final_rollout_idx = 0  
+            
+            # 4) ★ 옵션 고정: 무조건 최대 개수(5개) 보여주기
+            #    (가장 정보가 많고 선택지가 넓은 상태에서 학습)
+            from planning.RL.PalletFit_RL.config import PREVIEW_MAX
+            cur_pc_choices = [PREVIEW_MAX]  # [5]
+            
+        else:
+            # 중반 이후: 정상적으로 전체 풀 사용 & 시드 변경
+            offline_pool, folder_weights = _resolve_offline_pool_and_weights(cfg)
+            offline_files = _expand_offline_pool_to_files(offline_pool)
+            offline_file_weights = _distribute_folder_weights_to_files(offline_pool, folder_weights)
+            
+            real_p_fixed = p_scenario_fixed
+            real_p_online = cfg.online_type_ratio
+            real_p_tsg = cfg.tsg_ratio
+            # choices는 기본값(1~5 랜덤 등) 사용
+
+        return _make_plans_core(
+            cfg.seed,     # positional arg 1
+            n_envs,       # positional arg 2
+            
+            p_scenario_fixed=real_p_fixed,
+            p_online_type=real_p_online,
+            p_tsg=real_p_tsg,
+            rehearsal_p=rehearsal_p,
+            
+            rollout_idx=final_rollout_idx,  
+            
+            offline_file_candidates=offline_files,
+            offline_file_weights=offline_file_weights,
+            history=history,
+            
+            # [수정] 통합된 choices 전달
+            preview_cnt_choices=cur_pc_choices,
+        )
+    return plan_maker
+
+def make_eval_plan_maker(
+    cfg: AgentConfig,
+    *,
+    eval_offline_pool: Optional[List[str]] = None,
+    eval_offline_weights: Optional[List[float]] = None,
+    allow_online_type: bool = True,
+    allow_tsg: bool = True,
+    offline_path: str = "planning/data/Item_data/paper/setting123_discrete_eval/dataset_episode_012.json",
+    online_type_path: str = "planning/data/Item_data/exhibition/real_object2.json", 
+    tsg_cfg: Optional[Dict[str, Any]] = None,
+    bin_key: str = "experiment_RL",
+) -> Callable[[int, int], List[EnvPlan]]:
+
+    tsg_cfg_final: Dict[str, Any] = dict(tsg_cfg or DEFAULT_TSG_CFG)
+
+    # 1) Offline Pool 준비
+    if eval_offline_pool is not None:
+        offline_pool = list(eval_offline_pool)
+    elif cfg.offline_item_paths_pool:
+        offline_pool = list(cfg.offline_item_paths_pool)
+    else:
+        offline_pool = [offline_path]
+
+    offline_files = _expand_offline_pool_to_files(offline_pool) if offline_pool else []
+
+    # 2) Config: 평가용 옵션 결정 (최댓값 사용)
+    # [수정] preview_cnt_choices의 최댓값을 사용
+    if cfg.preview_cnt_choices:
+        preview_cnt_eval = int(max(cfg.preview_cnt_choices))
+    else:
+        from planning.RL.PalletFit_RL.config import PREVIEW_MAX
+        preview_cnt_eval = int(PREVIEW_MAX)
+
+    def plan_maker_eval(rollout_idx: int, n_envs: int, *, current_steps: int) -> List[EnvPlan]:
+        plans: List[EnvPlan] = []
+
+        for i in range(n_envs):
+            ep_seed = int(cfg.seed + 100_000 + rollout_idx * 10_000 + i)
+
+            # 5개 단위로 패턴 생성 (4 Offline : 1 Online)
+            is_online_turn = ((i + 1) % 5 == 0)
+
+            if is_online_turn:
+                # [Online 모드]
+                item_mode = "online_type"
+                target_path = [online_type_path] if online_type_path else ONLINE_TYPE_PATHS
+                
+                item_payload = {
+                    "online_item_type_path": target_path,
+                    "episode_seed": ep_seed,
+                    "tag": "eval_online",
+                }
+            
+            else:
+                # [Offline 모드]
+                if offline_files:
+                    item_mode = "offline"
+                    item_payload = {
+                        "offline_item_paths": list(offline_files),
+                        "episode_seed": ep_seed,
+                        "tag": "eval_offline",
+                    }
+                else:
+                    item_mode = "tsg"
+                    item_payload = {
+                        "tsg_cfg": dict(tsg_cfg_final),
+                        "episode_seed": ep_seed,
+                        "tag": "eval_tsg",
+                    }
+
+            # Plan 생성
+            plans.append(EnvPlan(
+                seed=ep_seed,
+                max_steps_per_episode=200,
+                
+                # [수정] 통합된 변수 하나만 전달
+                preview_cnt=preview_cnt_eval,
+                
+                mode="eval",
+                item_mode=item_mode,
+                item_payload=item_payload,
+                bin_alias=bin_key,
+                bin_margin_x=0,
+                bin_margin_y=0,
+                bin_payload={},
+            ))
+
+        return plans
+
+    return plan_maker_eval
+
+# =============================================================================
+# 2) Dataset History
+# ============================================================================
+@dataclass
+class SourceStat:
+    count: int = 0
+    ema_su: float = 0.0      # SU의 EMA
+    last_su: float = 0.0
+    last_ts: int = 0
+
+@dataclass
+class DatasetHistory:
+    offline: Dict[str, SourceStat] = field(default_factory=lambda: defaultdict(SourceStat))
+    online_type: Dict[str, SourceStat] = field(default_factory=lambda: defaultdict(SourceStat))
+    tsg: Dict[str, SourceStat] = field(default_factory=lambda: defaultdict(SourceStat))
+
+    ema_alpha: float = 0.2
+    min_episodes_master: int = 10
+    su_master_threshold: float = 0.85
+
+    def _bucket(self, mode: str):
+        return {"offline": self.offline, "online_type": self.online_type, "tsg": self.tsg}[mode]
+
+    def record(
+        self,
+        *,
+        item_mode: str,
+        item_payload: Dict[str, Any],
+        bin_key: str,
+        bin_payload: Dict[str, Any],
+        su: float,
+        timesteps: int,
+    ) -> None:
+        mode = str(item_mode)
+
+        # mode별 source_id 정의
+        if mode == "offline":
+            paths = item_payload.get("offline_item_paths", [])
+            source_id = str(paths[0]) if paths else "offline:unknown"
+        elif mode == "online_type":
+            paths = item_payload.get("online_item_type_path", [])
+            source_id = str(paths[0]) if paths else "online_type:unknown"
+        elif mode == "tsg":
+            source_id = "tsg"
+        else:
+            return  # 알 수 없는 모드는 기록 안함
+
+        b = self._bucket(mode)
+        st = b[source_id]
+        st.count += 1
+        st.last_su = float(su)
+        st.ema_su = (1.0 - self.ema_alpha) * st.ema_su + self.ema_alpha * float(su)
+        st.last_ts = int(timesteps)
+
+    # 🔹 새로 추가: plan(dict)에서 바로 기록
+    def record_from_plan_dict(self, plan: Dict[str, Any], su: float, timesteps: int) -> None:
+        if not isinstance(plan, dict):
+            return
+
+        item_mode = plan.get("item_mode",
+                     plan.get("item_load_mode",
+                     plan.get("mode", None)))
+        if item_mode is None:
+            return
+
+        item_payload = dict(plan.get("item_payload",
+                              plan.get("payload", {})) or {})
+        bin_key     = str(plan.get("bin", plan.get("bin_alias", "")))
+        bin_payload = dict(plan.get("bin_payload", {}) or {})
+
+        self.record(
+            item_mode=item_mode,
+            item_payload=item_payload,
+            bin_key=bin_key,
+            bin_payload=bin_payload,
+            su=su,
+            timesteps=timesteps,
+        )
+    # ---- (옵션) 어느 offline source가 '마스터' 되었는지 판단 ----
+    def mastered_offline(self) -> List[str]:
+        """
+        충분히 많이 등장했고(SU가 안정적으로 높은) offline 소스들 리스트.
+        지금은 코드 어디에서도 안 쓰지만, 나중에 curriculum 짤 때 유용할 수 있음.
+        """
+        out: List[str] = []
+        for src, st in self.offline.items():
+            if st.count >= self.min_episodes_master and st.ema_su >= self.su_master_threshold:
+                out.append(src)
+        return out
+
+    # ---- 디버깅/텍스트 출력용 스냅샷 ----
+    def debug_snapshot(self) -> Dict[str, Dict[str, dict]]:
+        """
+        {mode: {source_id: {count, ema_su, last_su, last_ts}}}
+        형태로 현재 히스토리 상태를 리턴.
+        """
+        def pack(d: Dict[str, SourceStat]) -> Dict[str, dict]:
+            return {
+                src: {
+                    "count": st.count,
+                    "ema_su": float(st.ema_su),
+                    "last_su": float(st.last_su),
+                    "last_ts": int(st.last_ts),
+                }
+                for src, st in d.items()
+            }
+
+        return {
+            "offline": pack(self.offline),
+            "online_type": pack(self.online_type),
+            "tsg": pack(self.tsg),
+        }
+
+    # ---- CSV 저장용 row 리스트 만들기 ----
+    def to_rows(self) -> List[Dict[str, Any]]:
+        """
+        CSV로 저장하기 좋은 형태의 리스트를 리턴.
+        각 row는 {"mode","source","count","ema_su","last_su","last_ts"} 필드를 가짐.
+        """
+        rows: List[Dict[str, Any]] = []
+
+        def dump(mode: str, d: Dict[str, SourceStat]) -> None:
+            for src, st in d.items():
+                rows.append({
+                    "mode": mode,
+                    "source": src,
+                    "count": st.count,
+                    "ema_su": float(st.ema_su),
+                    "last_su": float(st.last_su),
+                    "last_ts": int(st.last_ts),
+                })
+
+        dump("offline", self.offline)
+        dump("online_type", self.online_type)
+        dump("tsg", self.tsg)
+        return rows
+
+    # ---- CSV로 저장 ----
+    def save_csv(self, path: str) -> None:
+        """
+        dataset_history.csv로 저장.
+        - mode, source, count, ema_su, last_su, last_ts
+        """
+        rows = self.to_rows()
+        path_obj = Path(path)
+        path_obj.parent.mkdir(parents=True, exist_ok=True)
+
+        header = ["mode", "source", "count", "ema_su", "last_su", "last_ts"]
+        with path_obj.open("w", encoding="utf-8") as f:
+            f.write(",".join(header) + "\n")
+            for r in rows:
+                # source 안에 콤마가 있으면 CSV 깨지니까 공백으로 치환
+                src = str(r["source"]).replace(",", " ")
+                line = ",".join([
+                    str(r["mode"]),
+                    src,
+                    str(int(r["count"])),
+                    f"{float(r['ema_su']):.6f}",
+                    f"{float(r['last_su']):.6f}",
+                    str(int(r["last_ts"])),
+                ])
+                f.write(line + "\n")
+
+    # ---- 사람이 읽기 쉬운 텍스트로 저장 ----
+    def save_txt(self, path: str) -> None:
+        """
+        dataset_history.txt로 저장.
+        모드별로 나눠서 각 source의 통계를 사람이 읽기 쉽게 출력.
+        """
+        snap = self.debug_snapshot()
+        path_obj = Path(path)
+        path_obj.parent.mkdir(parents=True, exist_ok=True)
+
+        with path_obj.open("w", encoding="utf-8") as f:
+            for mode in ["offline", "online_type", "tsg"]:
+                f.write(f"== {mode} ==\n")
+                mdict = snap.get(mode, {})
+                for src, st in mdict.items():
+                    f.write(
+                        f"- {src}: "
+                        f"count={st['count']} "
+                        f"ema_su={st['ema_su']:.4f} "
+                        f"last_su={st['last_su']:.4f} "
+                        f"last_ts={st['last_ts']}\n"
+                    )
+                f.write("\n")
+
+    def load_csv(self, path: str):
+        """
+        이전 run에서 저장한 dataset_history.csv를 읽어서
+        offline / online_type / tsg 통계를 복구한다.
+        """
+        path = Path(path)
+        if not path.is_file():
+            print(f"[DatasetHistory] CSV not found, skip load: {path}")
+            return
+
+        # 기존 내용 초기화
+        self.offline     = defaultdict(SourceStat)
+        self.online_type = defaultdict(SourceStat)
+        self.tsg         = defaultdict(SourceStat)
+
+        with path.open("r", newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                mode   = row.get("mode")
+                source = row.get("source")
+                if not mode or not source:
+                    continue
+
+                try:
+                    bucket = self._bucket(mode)
+                except ValueError:
+                    # 모르는 mode면 무시
+                    continue
+
+                st = bucket[source]  # defaultdict라서 자동 생성
+                try:
+                    st.count   = int(row.get("count", "0"))
+                except ValueError:
+                    pass
+                try:
+                    st.ema_su  = float(row.get("ema_su", "0.0"))
+                except ValueError:
+                    pass
+                try:
+                    st.last_su = float(row.get("last_su", "0.0"))
+                except ValueError:
+                    pass
+                try:
+                    st.last_ts = int(row.get("last_ts", "0"))
+                except ValueError:
+                    pass
+
+        print(f"[DatasetHistory] Loaded history from CSV: {path}")
+
+# =============================================================================
+# 2) 성능 기반(옵션) 페이즈 컨트롤러
+#    - 시간 기반과 하이브리드로 사용 권장
+# =============================================================================
+class AdaptivePhaseController:
+    def __init__(self, *, W=4, eps_slope=1e-3, eps_std=1e-2, min_eval_gap=2):
+        self.phase = 0  # 0:bootstrap, 1:mid, 2:late
+        self.hist: List[float] = []
+        self.W = int(W)
+        self.eps_slope = float(eps_slope)
+        self.eps_std = float(eps_std)
+        self.min_eval_gap = int(min_eval_gap)
+        self._last_phase_eval_idx = -10
+        self._eval_count = 0
+
+    def _phase_to_ratios(self):
+        return [(0.70, 0.30), (0.50, 0.50), (0.40, 0.60)][self.phase]
+
+    def _phase_to_rehearsal(self):
+        return [0.10, 0.15, 0.20][self.phase]
+
+    def on_eval(self, su_mean: float) -> None:
+        self._eval_count += 1
+        self.hist.append(float(su_mean))
+        self.hist = self.hist[-(self.W + 2):]
+
+        if (self._eval_count - self._last_phase_eval_idx) < self.min_eval_gap:
+            return
+        if len(self.hist) < self.W:
+            return
+        y = np.array(self.hist[-self.W:])
+        slope = (y[-1] - y[0]) / max(1, self.W - 1)
+        stable = (abs(slope) < self.eps_slope) and (np.std(y) < self.eps_std)
+        if stable and self.phase < 2:
+            self.phase += 1
+            self._last_phase_eval_idx = self._eval_count
+
+    def ratios(self):
+        return self._phase_to_ratios()
+
+    def rehearsal_p(self):
+        return self._phase_to_rehearsal()
+
+
+# =============================================================================
+# 3) 콜백: TrainsetScheduling (per-rollout)
+# =============================================================================
+class TrainsetSchedulingCallback(BaseCallback):
+    def __init__(self, plan_maker, verbose: int = 0):
+        super().__init__(verbose)
+        self.plan_maker = plan_maker
+        self.rollout_idx = 0
+
+    def _on_rollout_start(self) -> None:
+        venv = self.model.get_env()
+        n = int(getattr(venv, "num_envs", 1))
+        current_steps = int(getattr(self.model, "num_timesteps", 0))
+
+        plans: List[EnvPlan] = self.plan_maker(self.rollout_idx, n, current_steps=current_steps)
+        assert len(plans) == n
+
+        for i, p in enumerate(plans):
+            payload = env_plan_to_payload(p)
+            venv.env_method("apply_plan", payload, indices=[i])
+
+        self.rollout_idx += 1
+
+    def _on_step(self) -> bool:
+        return True
+# =============================================================================
+# 4) 간단 로깅 + 평가-적응 하이브리드 콜백
+# =============================================================================
+class EvalAndAdaptiveCallback(BaseCallback):
+    def __init__(
+        self, 
+        *, 
+        eval_fn, 
+        eval_interval_steps: int,
+        adaptive_ctl=None, 
+        inject_adaptive_to_plan_maker=None, 
+        best_model_save_path: str | None = None,  # [추가] 저장 경로
+        verbose=0
+    ):
+        super().__init__(verbose)
+        self.eval_fn = eval_fn
+        self.eval_interval_steps = int(eval_interval_steps)
+        self.adaptive_ctl = adaptive_ctl
+        self.inject_adaptive_to_plan_maker = inject_adaptive_to_plan_maker
+        self._last_eval_ts = 0
+        
+        # [추가] Best Model 추적용 변수 및 파일 경로 설정
+        self.best_model_save_path = best_model_save_path
+        self.best_su = -float('inf')
+        self.best_su_file = None
+
+        # 파일에서 기존 Best SU 불러오기 (Persistence)
+        if self.best_model_save_path is not None:
+            os.makedirs(self.best_model_save_path, exist_ok=True)
+            self.best_su_file = os.path.join(self.best_model_save_path, "best_su.txt")
+            
+            if os.path.exists(self.best_su_file):
+                try:
+                    with open(self.best_su_file, "r") as f:
+                        val = float(f.read().strip())
+                        self.best_su = val
+                    if self.verbose > 0:
+                        print(f"[EvalCallback] Loaded previous best SU: {self.best_su:.4f}")
+                except Exception as e:
+                    print(f"[EvalCallback] Warning: Failed to load best_su.txt: {e}")
+
+    def _on_step(self) -> bool:
+        ns = int(self.num_timesteps)
+        # 마지막 평가로부터 일정 스텝이 지났는지 확인
+        if (ns - self._last_eval_ts) < self.eval_interval_steps:
+            return True
+        self._last_eval_ts = ns
+
+        # 1. 평가 수행
+        metrics = self.eval_fn() or {}
+        
+        if metrics:
+            # 2. Best Model 저장 로직 (파일 Persistence 포함)
+            current_su = float(metrics.get("SU", -float('inf')))
+            
+            # 기존 기록보다 더 좋을 때만 갱신
+            if current_su > self.best_su:
+                self.best_su = current_su
+                
+                if self.best_model_save_path is not None:
+                    # (A) 모델 저장
+                    save_path = os.path.join(self.best_model_save_path, "best_model")
+                    self.model.save(save_path)
+                    
+                    # (B) 점수 파일 저장 (다음 재시작을 위해)
+                    try:
+                        with open(self.best_su_file, "w") as f:
+                            f.write(str(self.best_su))
+                    except Exception as e:
+                        print(f"[EvalCallback] Warning: Failed to write best_su.txt: {e}")
+
+                    if self.verbose > 0:
+                        print(f"🔥 New best model saved to {save_path}.zip (SU={current_su:.4f})")
+
+            # 3. SB3 logger 기록
+            for k, v in metrics.items():
+                self.logger.record(f"eval/{k}", float(v))
+            self.logger.dump(ns)
+
+        # 4. 어댑티브 제어 (기존 로직 유지)
+        if self.adaptive_ctl is not None and metrics:
+            su_mean = float(metrics.get("SU_mean", metrics.get("SU", 0.0))) # SU 또는 SU_mean 사용
+            self.adaptive_ctl.on_eval(su_mean)
+            p_fixed, _ = self.adaptive_ctl.ratios()
+            rehearsal_p = self.adaptive_ctl.rehearsal_p()
+            if self.inject_adaptive_to_plan_maker is not None:
+                self.inject_adaptive_to_plan_maker(self.adaptive_ctl.phase, p_fixed, rehearsal_p)
+        
+        return True
+
+# =============================================================================
+# 5) dataset history 콜백
+# =============================================================================
+class HistoryCollectorCallback(BaseCallback):
+    def __init__(self, history: DatasetHistory, ema_alpha: float = 0.2, verbose: int = 0):
+        super().__init__(verbose)
+        self.history = history
+        self.ema_alpha = float(ema_alpha)
+        self._su_ema: float = 0.0
+        self._su_count: int = 0
+
+    def _on_step(self) -> bool:
+        infos = self.locals.get("infos", None)
+        dones = self.locals.get("dones", None)
+        if infos is None or dones is None:
+            return True
+
+        ts = int(self.num_timesteps)
+        any_done = False
+
+        for done, info in zip(dones, infos):
+            if not bool(done) or not isinstance(info, dict):
+                continue
+
+            any_done = True
+
+            # ── env info에서 값 꺼내기 ───────────────────
+            su           = float(info.get("SU", 0.0))
+            ep_ret       = float(info.get("return", 0.0))
+            steps_in_ep  = int(info.get("steps_in_ep", 0))
+            packed_cnt   = int(info.get("packed_count", 0))
+            mode         = str(info.get("item_mode", "unknown"))
+            
+            # [수정] 통합된 변수
+            preview_cnt  = int(info.get("preview_cnt", 0)) 
+            
+            # (삭제됨: head_slots, selectable_len, preview_k)
+
+            # ── DatasetHistory 적립 ─────────────────────
+            plan = info.get("plan", None)
+            if isinstance(plan, dict):
+                self.history.record_from_plan_dict(plan, su=su, timesteps=ts)
+
+            # ── SU running EMA 업데이트 ─────────────────
+            self._su_count += 1
+            if self._su_count == 1:
+                self._su_ema = su
+            else:
+                self._su_ema = (1.0 - self.ema_alpha) * self._su_ema + self.ema_alpha * su
+
+            # ── TensorBoard train/* 로깅 (에피소드 단위) ─
+            self.logger.record(f"train/{mode}_SU", su)
+            self.logger.record(f"train/{mode}_packed", packed_cnt)
+            self.logger.record(f"train/{mode}_return", ep_ret)            
+            self.logger.record(f"train/{mode}_episode_len", steps_in_ep)
+            
+            # [수정] 깔끔하게 preview_cnt 하나만 남김
+            self.logger.record(f"train/{mode}_preview_cnt", preview_cnt)
+            
+            # (삭제됨: head_slots 등)
+
+            for key, val in info.items():
+                if key.startswith("r_ep_"):
+                    name = key[len("r_ep_"):]  
+                    self.logger.record(f"train/reward_ep/{name}", float(val))
+
+        if any_done:
+            self.logger.dump(ts)
+
+        return True
+
+
+class HistorySaverCallback(BaseCallback):
+    def __init__(self, history: "DatasetHistory", out_dir: str, save_every_steps: int = 50_000, verbose: int = 0):
+        super().__init__(verbose)
+        self.history = history
+        self.out_dir = Path(out_dir)
+        self.save_every_steps = int(save_every_steps)
+        self._last_save_ts = 0
+
+    def _save_now(self, ts: int):
+        csv_path = self.out_dir / "dataset_history.csv"
+        txt_path = self.out_dir / "dataset_history.txt"
+        self.history.save_csv(str(csv_path))
+        self.history.save_txt(str(txt_path))
+        if self.verbose:
+            print(f"[HistorySaver] saved history at {ts} steps -> {csv_path.name}, {txt_path.name}")
+
+    def _on_step(self) -> bool:
+        ts = int(self.num_timesteps)
+        if (ts - self._last_save_ts) >= self.save_every_steps:
+            self._last_save_ts = ts
+            self._save_now(ts)
+        return True
+
+    def _on_training_end(self) -> None:
+        self._save_now(int(self.num_timesteps))
+
+
+# =============================================================================
+# 5) Env 팩토리: seed, tb_log_dir만 전달 (디버깅: DummyVecEnv 고정)
+# =============================================================================
+info_keys = ("SU","steps_in_ep","return","packed_count",)
+
+def make_single_env(seed: int, tb_log_dir: str):
+    def _thunk():
+        env = PalletFitEnv(seed=seed, tb_log_dir=tb_log_dir)
+        return Monitor(env, info_keywords=info_keys)
+    return _thunk
+
+def make_envs(*, mode: str, n_envs: int, base_seed: int, tb_log_dir: str) -> VecEnv:
+    thunks = [make_single_env(base_seed + i, tb_log_dir) for i in range(n_envs)]
+    venv: VecEnv = SubprocVecEnv(thunks, start_method="spawn")  # ★ spawn 권장
+    # venv: VecEnv = DummyVecEnv(thunks)                  # 단일 프로세스, 안정
+    venv = VecMonitor(venv, filename=str(Path(tb_log_dir) / f"monitor_{mode}"))
+    return venv
+
+def make_eval_env(*, n_envs: int, base_seed: int, tb_log_dir: str, backend: str = "dummy") -> VecEnv:
+    thunks = [make_single_env(base_seed + i, tb_log_dir) for i in range(n_envs)]
+
+    if backend == "dummy":
+        venv: VecEnv = DummyVecEnv(thunks)                  # 단일 프로세스, 안정
+    else:
+        venv = SubprocVecEnv(thunks, start_method="spawn")  # 병렬 필요 시
+
+    venv = VecMonitor(venv, filename=str(Path(tb_log_dir) / "monitor_eval"))
+    return venv
+
+
+# =============================================================================
+# 6) Agent
+# =============================================================================
+class MaskablePPOAgent:
+    def __init__(self, *, cfg: Optional[AgentConfig] = None, override_log_dir: Optional[str] = None):        
+        self.cfg = cfg or AgentConfig()
+        
+        if override_log_dir:
+            # 1) 외부에서 지정한 고정 경로 사용 (무한 루프용)
+            self.log_dir = Path(override_log_dir)
+            print(f"[Agent] Using overridden log_dir: {self.log_dir}")
+        else:
+            # 2) 날짜 기반 경로 생성 (단발성 실행용)
+            self.run_id = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            self.logs_root = Path("planning/RL/PalletFit_RL/logs")
+            self.log_dir = self.logs_root / f"MaskablePPO_{self.run_id}"
+        
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.history = DatasetHistory()
+        self._cached_eval_plans: Optional[List[List[EnvPlan]]] = None
+
+        # 1) VecEnvs 먼저
+        self.env = make_envs(
+            mode="train",
+            n_envs=self.cfg.n_envs_train,
+            base_seed=self.cfg.seed,
+            tb_log_dir=str(self.log_dir),
+        )
+
+        # 평가 환경: 우선 1환경 Dummy로 안정성 체크
+        self.eval_env = make_eval_env(
+            n_envs=1,
+            base_seed=self.cfg.seed + 10_000,
+            tb_log_dir=str(self.log_dir),
+            backend="dummy",   # 병렬평가가 필요해지면 "subproc"로만 바꿔 사용
+        )
+
+        # 2) 모델 생성
+        self.model = MaskablePPO(
+            policy=PointerPolicyFT,
+            env=self.env,
+            learning_rate=self.cfg.learning_rate,
+            n_steps=self.cfg.n_steps,
+            batch_size=self.cfg.batch_size,
+            gamma=self.cfg.gamma,
+            ent_coef=self.cfg.ent_coef,
+            vf_coef=self.cfg.vf_coef,
+            clip_range=self.cfg.clip_range,
+            tensorboard_log=str(self.log_dir),
+            device=self.cfg.device,
+            seed=self.cfg.seed,
+            verbose=1,
+            policy_kwargs=dict(
+                features_extractor_class=CustomCombinedExtractor,
+                features_extractor_kwargs=dict(item_encoder="deepset"),
+                    net_arch=dict(
+                        # FT backbone 하이퍼 (굵게!)
+                        ft_n_tokens=8,
+                        ft_d_model=256,
+                        ft_n_heads=8,
+                        ft_depth=6,
+                        ft_mlp_ratio=6.0,
+                        ft_p_drop=0.1,
+                        ft_drop_path=0.1,    # ← 위에서 받게 했으면 여기도
+                        ft_out_pi=256,
+                        ft_out_vf=256,
+                        ft_use_rope=True,    # ← 옵션화 했다면
+                    ),
+                optimizer_kwargs=dict(weight_decay=1e-5)
+
+                ),
+        )
+
+        # 3) Writer
+        self.writer = SummaryWriter(log_dir=str(self.log_dir))
+        self._eval_call_idx = 0
+        new_logger = configure(str(self.log_dir), ["stdout", "csv", "tensorboard"])
+        self.model.set_logger(new_logger)
+
+        # 4) ── 플랜 메이커를 '먼저' 만든다 ──
+        time_based_plan_maker = make_time_based_plan_maker(self.cfg, self.history)
+
+        # (선택) 어댑티브 컨트롤러와 하이브리드 plan_maker
+        self.adaptive_ctl = None
+        _override_phase = None
+
+        def plan_maker_hybrid(rollout_idx: int, n_envs: int, *, current_steps: int) -> List[EnvPlan]:
+            if _override_phase is None:
+                # 적응 전에는 그냥 time_based 사용
+                return time_based_plan_maker(rollout_idx, n_envs, current_steps=current_steps)
+
+            phase = int(_override_phase)
+            p_fixed = [0.70, 0.50, 0.40][phase]
+            rehearsal_p = [
+                self.cfg.rehearsal_p_boot,
+                self.cfg.rehearsal_p_mid,
+                self.cfg.rehearsal_p_late,
+            ][phase]
+
+            offline_pool, folder_weights = _resolve_offline_pool_and_weights(self.cfg)
+            offline_files = _expand_offline_pool_to_files(offline_pool)
+            offline_file_weights = _distribute_folder_weights_to_files(offline_pool, folder_weights)
+
+            return _make_plans_core(
+                seed=self.cfg.seed,
+                n_envs=n_envs,
+                p_scenario_fixed=p_fixed,
+                p_online_type=self.cfg.online_type_ratio,
+                p_tsg=self.cfg.tsg_ratio,
+                rehearsal_p=rehearsal_p,
+                rollout_idx=rollout_idx,
+                bin_key="experiment_RL",
+                margin_range=(0, 8),
+                offline_file_candidates=offline_files,
+                offline_file_weights=offline_file_weights,
+                history=self.history,
+                selectable_len_choices=self.cfg.selectable_len_choices,
+                preview_k_choices=self.cfg.preview_k_choices,
+            )
+
+        def inject_adaptive_to_plan_maker(phase_idx: int, p_fixed: float, rehearsal_p: float):
+            nonlocal _override_phase
+            _override_phase = int(max(_override_phase or 0, phase_idx))
+
+        # ★ 여기서 최종 plan_maker를 '지금' 할당
+        self.plan_maker = plan_maker_hybrid if self.cfg.use_adaptive_phase else time_based_plan_maker
+        self.eval_plan_maker = make_eval_plan_maker(
+            self.cfg,
+            eval_offline_pool=self.cfg.eval_item_paths_pool 
+        )
+
+        # 5) 콜백 스택을 만든다 (plan_maker를 사용)
+        self.callbacks = self._make_callbacks(
+            plan_maker=self.plan_maker,
+            inject_adaptive_to_plan_maker=inject_adaptive_to_plan_maker if self.cfg.use_adaptive_phase else None
+        )
+
+        # 6) ★ 선주입: learn() 전에 첫 reset용 플랜을 미리 넣기
+        initial_plans = self.plan_maker(
+            0,
+            int(getattr(self.env, "num_envs", self.cfg.n_envs_train)),
+            current_steps=0,
+        )
+        for i, p in enumerate(initial_plans):
+            payload = env_plan_to_payload(p)
+            self.env.env_method("apply_plan", payload, indices=[i])
+
+        # 7) 콜백의 rollout_idx를 1로 시작(중복 방지)
+        for cb in self.callbacks.callbacks:
+            if isinstance(cb, TrainsetSchedulingCallback):
+                cb.rollout_idx = 1
+                
+    def loadModel(self, path: str, history_dir: Optional[str] = None):
+        """
+        path: 예) 'planning/RL/PalletFit_RL/logs/MaskablePPO_20251113-174205/ppo_ckpt_24576_steps.zip'
+        """
+        print(f"[MaskablePPOAgent] Loading pretrained model from: {path}")
+
+        custom_objects = {
+            "learning_rate": self.cfg.learning_rate,
+            "clip_range": self.cfg.clip_range, 
+        }
+
+        # 1) 기존 self.model은 버리고, checkpoint에서 다시 로드
+        self.model = MaskablePPO.load(
+            path,
+            env=self.env,              # 현재 env에 붙여줌
+            device=self.cfg.device,    # cuda / cpu
+            custom_objects=custom_objects, # 수정된 dict 전달
+        )
+        
+        if history_dir is not None:
+            history_log_dir = Path(history_dir)
+        else:
+            history_log_dir = Path(path).resolve().parent
+
+        self.load_history_from_dir(str(history_log_dir))
+
+        # 2) logger는 새 run 디렉토리로 다시 붙여주기
+        new_logger = configure(str(self.log_dir), ["stdout", "csv", "tensorboard"])
+        self.model.set_logger(new_logger)
+
+        print("[MaskablePPOAgent] Model successfully loaded and bound to current env.")
+
+    def load_history_from_dir(self, log_dir: str):
+        log_dir = Path(log_dir)
+        csv_path = log_dir / "dataset_history.csv"
+
+        if csv_path.is_file():
+            self.history.load_csv(str(csv_path))
+        else:
+            print(f"[Agent] No dataset_history.csv found in: {csv_path}")
+        
+    # 콜백 구성
+    def _eval_interval_steps(self) -> int:
+        return max(1, int(self.cfg.n_steps) * int(self.cfg.n_envs_train) * int(self.cfg.eval_every_rollouts))
+
+    def _save_interval_steps(self) -> int:
+        return max(1, int(self.cfg.n_steps) * int(self.cfg.n_envs_train) * int(self.cfg.save_every_rollouts))
+
+    def _make_callbacks(self, plan_maker, inject_adaptive_to_plan_maker) -> CallbackList:
+        cbs: List[BaseCallback] = []
+
+        # Trainset 스케줄링
+        cbs.append(TrainsetSchedulingCallback(plan_maker, verbose=1))
+
+        # ★ 데이터셋 히스토리 수집
+        cbs.append(HistoryCollectorCallback(self.history, verbose=0))
+        # ★ 히스토리 저장(주기 조절 가능)
+        cbs.append(HistorySaverCallback(self.history, out_dir=str(self.log_dir), save_every_steps=self._save_interval_steps(), verbose=1))
+
+        # (선택) 평가 + 어댑티브
+        adaptive_ctl = None
+        if self.cfg.use_adaptive_phase:
+            adaptive_ctl = AdaptivePhaseController(
+                W=self.cfg.perf_window,
+                eps_slope=self.cfg.perf_eps_slope,
+                eps_std=self.cfg.perf_eps_std,
+                min_eval_gap=self.cfg.perf_min_eval_gap,
+            )
+        # 체크포인트 콜백 유지
+        ckpt = CheckpointCallback(
+            save_freq=1,                      # 콜백 내부 카운터용: 1로 둠
+            save_path=str(self.log_dir),
+            name_prefix="ppo_ckpt",
+        )
+        wrapped_ckpt = EveryNTimesteps(
+            n_steps=self._save_interval_steps(),  # ← 1024 timesteps마다
+            callback=ckpt
+        )
+        cbs.append(wrapped_ckpt)
+
+        cbs.append(EvalAndAdaptiveCallback(
+            eval_fn=self.evaluation,
+            eval_interval_steps=self._eval_interval_steps(),
+            adaptive_ctl=adaptive_ctl,
+            inject_adaptive_to_plan_maker=inject_adaptive_to_plan_maker,
+            best_model_save_path=str(self.log_dir),
+            verbose=1,
+        ))
+        # cbs.append(AdaptiveHyperparamCallback(
+        #     eval_fn=lambda: self.evaluation(episodes=5),
+        #     check_freq=self._eval_interval_steps(),
+        #     log_dir=str(self.log_dir),  # <--- 여기 추가!
+        #     verbose=1
+        # ))
+        return CallbackList(cbs)
+
+    # ────────────────────────────────────────────────
+    # 간단 평가 루틴
+    # ────────────────────────────────────────────────
+    @th.no_grad()
+    def evaluation(self, episodes: int = 3) -> Dict[str, float]:
+        """
+        rl_adapter와 동일한 로직(Builder 함수 사용, check=True)으로 평가를 수행합니다.
+        """
+        self.model.policy.set_training_mode(False)
+        
+        # 1. 평가용 Plan 캐싱
+        if getattr(self, "_cached_eval_plans", None) is None:
+             print(f"Generating and caching static eval plans ({episodes} episodes)...")
+             
+             plan_maker = make_eval_plan_maker(
+                 self.cfg, 
+                 eval_offline_pool=self.cfg.eval_item_paths_pool
+             )
+             self._cached_eval_plans = plan_maker(0, episodes, current_steps=0)
+        
+        plans = self._cached_eval_plans
+        if plans is None:
+            plans = []
+
+        su_list = []
+        packed_list = []
+        
+        # 렌더링 저장 경로 설정
+        render_dir = self.log_dir / "eval_renders"
+        render_dir.mkdir(parents=True, exist_ok=True)
+
+        # Config 상수 가져오기 (파일 상단에 import 되어 있다고 가정)
+        from planning.RL.PalletFit_RL.config import PREVIEW_MAX, ACTION_MAX_CANDIDATES
+
+        for i, plan in enumerate(plans):
+            # ─────────────────────────────────────────────────────────────
+            # (A) 환경 구성 (Packer & Item Load)
+            # ─────────────────────────────────────────────────────────────
+            packer = Packer(rotation_type=RotationType.BasicRotation, order_setting=False)
+            
+            # 1. item_mode 확인 및 Bin Alias 결정
+            item_mode = plan.item_mode
+            if item_mode == "offline":
+                target_bin = "experiment_RL"
+            elif item_mode == "online_type":
+                target_bin = "default2"
+            else:
+                target_bin = plan.bin_alias
+
+            # 2. Bin 빌드
+            try:
+                packer.build_bin(target_bin)
+            except Exception as e:
+                print(f"[WARN] Failed to build bin '{target_bin}': {e}. Fallback to 'experiment_RL'")
+                packer.build_bin("experiment_RL")
+
+            packer.current_bin.margin_x = plan.bin_margin_x
+            packer.current_bin.margin_y = plan.bin_margin_y
+            
+            # 3. 아이템 생성/로드
+            item_mode = plan.item_mode
+            item_payload = plan.item_payload
+            ep_seed = int(item_payload.get("episode_seed", 0))
+            
+            random.seed(ep_seed)
+            np.random.seed(ep_seed)
+            
+            items_list = []
+            try:
+                if item_mode == "tsg":
+                    tsg_cfg_dict = item_payload.get("tsg_cfg", {})
+                    tsg_cfg = TSGConfig(**tsg_cfg_dict)
+                    items_list = _generate_items_with_tsg(tsg_cfg)
+                elif item_mode == "offline":
+                    paths = item_payload.get("offline_item_paths", [])
+                    if paths:
+                        selected_path = paths[i % len(paths)]
+                        packer.offline_item_path = selected_path
+                        packer._load_offline_data()
+                        items_list = packer.items_list
+                elif item_mode == "online_type":
+                    paths = item_payload.get("online_item_type_path", [])
+                    if paths:
+                        packer.online_item_type_path = paths[i % len(paths)]
+                        packer._load_online_item_type_data()
+                        items_list = packer.items_list
+            except Exception as e:
+                print(f"⚠️ Eval Item Load Error: {e}")
+                continue
+
+            if not items_list:
+                continue
+
+            # ─────────────────────────────────────────────────────────────
+            # (B) 적재 루프
+            # ─────────────────────────────────────────────────────────────
+            queue = deque([it._id for it in items_list])
+            bin_obj = packer.current_bin
+            
+            # [수정] 통합된 변수 하나만 사용
+            preview_cnt = int(plan.preview_cnt)
+            
+            K = int(ACTION_MAX_CANDIDATES)
+            # [수정] PREVIEW_MAX 상수를 사용하여 TOTAL 계산
+            TOTAL = int(PREVIEW_MAX * K)
+            NOOP_IDX = TOTAL - 1
+
+            while len(queue) > 0:
+                # (1) 후보 갱신 (check=True)
+                # [수정] rebuild_candidates 인자 변경 (preview_cnt)
+                last_mask, last_cands, _ = rebuild_candidates(
+                    TOTAL=TOTAL,
+                    preview_cnt=preview_cnt,  # <--- 통합된 인자
+                    queue=queue,
+                    bin=bin_obj,
+                    K=K,
+                    NOOP_IDX=NOOP_IDX,
+                    cands_option='EDP',
+                    check=True 
+                )
+
+                if not np.any(last_mask[:NOOP_IDX]):
+                    break
+
+                # (2) 관측
+                # [수정] queue_head 인자 변경
+                head_q = queue_head(preview_cnt, queue)
+                raw_obs = build_observation_deque(bin_obj=bin_obj, queue=head_q, preview_cnt=preview_cnt)
+                
+                obs_input = {k: v for k, v in raw_obs.items()}
+                obs_input["act_mask"] = last_mask.astype(np.float32)
+                obs_input["act_cands"] = last_cands.astype(np.float32)
+
+                # (3) 추론
+                with th.no_grad():
+                    action, _ = self.model.predict(
+                        obs_input,
+                        deterministic=True,
+                        action_masks=last_mask
+                    )
+                    action = int(action)
+
+                if action == NOOP_IDX:
+                    break
+
+                # (4) 실행
+                # [수정] place_by_action 인자 변경
+                ok, placed_item = place_by_action(
+                    action, 
+                    preview_cnt, # <--- 통합된 인자
+                    queue, 
+                    bin_obj, 
+                    last_mask, 
+                    last_cands, 
+                    K
+                )
+
+                if ok:
+                    pass
+                    bin_obj.simplify()
+                else:
+                    break
+            
+            su_list.append(bin_obj.SU)
+            packed_list.append(bin_obj.size)
+            try:
+                # 렌더링 저장
+                now_str = datetime.datetime.now().strftime("%m%d_%H%M%S")
+                save_name = f"{now_str}_eval_ep{i:03d}_SU{bin_obj.SU:.3f}.png"
+                
+                bin_obj.render(
+                    save=True, 
+                    save_path=str(render_dir), 
+                    name=save_name,
+                    size_annotation=False,
+                    show=False
+                )
+            except Exception as e:
+                print(f"⚠️ Render failed for episode {i}: {e}")
+
+        mean_su = float(np.mean(su_list)) if su_list else 0.0
+        mean_packed = float(np.mean(packed_list)) if packed_list else 0.0
+        
+        self.model.policy.set_training_mode(True)
+        return {"SU": mean_su, "packed": mean_packed}
+
+    def train(self):
+        # --- 0) log_dir 준비 & 소스 파일 스냅샷 ---
+        os.makedirs(self.log_dir, exist_ok=True)
+
+        src_dir = os.path.join("planning", "RL", "PalletFit_RL")
+        snapshot_files = [
+            "agent.py",
+            "config.py",
+            "env.py",
+            "obs_builder.py",
+            "reward_builder.py",
+            "act_builder.py",
+            "custom_value_policy.py",
+        ]
+        for fname in snapshot_files:
+            src = os.path.join(src_dir, fname)
+            dst = os.path.join(self.log_dir, fname)
+            try:
+                if os.path.isfile(src):
+                    shutil.copy2(src, dst)
+                else:
+                    print(f"[train] skip snapshot: not found -> {src}")
+            except Exception as ce:
+                print(f"[train] snapshot copy failed for {fname}: {ce}")
+
+        try:
+            self.model.learn(
+                total_timesteps=int(self.cfg.total_timesteps),
+                callback=self.callbacks,
+                progress_bar=True
+            )
+
+            # --- 1) 학습 완료 후 최종 모델 저장 ---
+            final_model_path = self.log_dir / "final_model.zip"
+            self.model.save(str(final_model_path))
+            print(f"[train] Final model saved to: {final_model_path}")
+
+        finally:
+            self.writer.flush()
+            self.writer.close()
+
+
+
+# =============================================================================
+# 7) main
+# =============================================================================
+
+# def smoke_test_env():
+#     print("🚬 [Smoke Test] 환경 무결성 검사 시작...")
+    
+#     # 1. 환경 초기화
+#     # (Config에서 사용하는 경로가 있다면 맞춰주세요)
+#     env = PalletFitEnv()
+    
+#     # 테스트용 플랜 설정 (오프라인 파일 하나 지정)
+#     test_plan = {
+#         "item_mode": "offline",
+#         "item_payload": {
+#             "offline_item_paths": ["planning/data/Item_data/paper/setting123_discrete/dataset_episode_000.json"],
+#             "episode_seed": 123
+#         },
+#         "bin": "experiment_RL"
+#     }
+#     env.apply_plan(test_plan)
+    
+#     obs, info = env.reset()
+    
+#     done = False
+#     step_count = 0
+#     total_reward = 0
+    
+#     while not done:
+#         step_count += 1
+        
+#         # 2. 유효한 액션 마스킹 확인
+#         valid_actions = np.where(obs['act_mask'] == 1)[0]
+        
+#         # NOOP(아무것도 안 함) 제외하고 실제 적재 액션이 있는지 확인
+#         real_actions = [a for a in valid_actions if a != env.NOOP_IDX]
+        
+#         if len(real_actions) > 0:
+#             # 랜덤으로 적재 액션 선택
+#             action = np.random.choice(real_actions)
+#             action_type = "PLACE"
+#         else:
+#             # 적재할 곳이 없으면 NOOP (종료 가능성 높음)
+#             action = env.NOOP_IDX
+#             action_type = "NOOP"
+            
+#         # 3. Step 실행
+#         obs, reward, terminated, truncated, info = env.step(action)
+#         total_reward += reward
+#         done = terminated or truncated
+        
+#         # 4. 상태 확인
+#         current_bin_size = env.packer.current_bin.size
+#         print(f"   Step {step_count}: Action={action_type}({action}) -> Reward={reward:.4f}, BinSize={current_bin_size}}")
+        
+#         # [검증] 적재 액션을 했는데 Bin Size가 안 늘어나면 문제
+#         if action_type == "PLACE" and reward > 0:
+#             if current_bin_size < step_count: 
+#                 print(f"❌ [Critical] 적재 성공했는데 Bin Size가 증가하지 않음! (Current: {current_bin_size})")
+#                 return
+
+#     print(f"🏁 에피소드 종료. 총 스텝: {step_count}, 최종 Bin Size: {env.packer.current_bin.size}, SU: {info['SU']:.4f}")
+    
+#     if env.packer.current_bin.size > 0:
+#         print("✅ [Pass] 아이템이 정상적으로 적재되었습니다.")
+#     else:
+#         print("❌ [Fail] 아이템이 하나도 적재되지 않았습니다.")
+
+# if __name__ == "__main__":
+#     smoke_test_env()
+
+
+# if __name__ == "__main__":
+#     import torch
+    
+#     torch.cuda.empty_cache()
+
+#     # old_log_dir = "planning/RL/PalletFit_RL/logs/MaskablePPO_20251222-124925"
+
+#     agent = MaskablePPOAgent(cfg=AgentConfig())
+#     agent.loadModel(
+#         'planning/RL/PalletFit_RL/logs/MaskablePPO_20251222-124925/ppo_ckpt_6500376_steps.zip'
+#     )
+#     # 방법 1) loadModel에 history_dir 인자로 넘기기
+#     # agent.loadModel(
+#     #     f'{old_log_dir}/final_model.zip',
+#     #     history_dir=old_log_dir,
+#     # )
+#     # agent.loadModel("planning/RL/PalletFit_RL/logs/MaskablePPO_20251128-110723/ppo_ckpt_2621440_steps.zip")
+#     agent.train()
+
+
+
+# =============================================================================
+# 무한 학습 코드
+# =============================================================================
+if __name__ == "__main__":
+    import torch
+    import glob
+    import os
+    import re
+    
+    torch.cuda.empty_cache()
+
+    # =========================================================================
+    # ★ [설정] 경로 지정
+    # =========================================================================
+    LOG_DIR_ROOT = "planning/RL/PalletFit_RL/logs/MaskablePPO_AutoResume"
+    # 기존에 학습하던 모델이 있다면 여기에 지정 (없으면 None)
+    SPECIFIC_START_MODEL = "planning/RL/PalletFit_RL/logs/MaskablePPO_20251212-122844/ppo_ckpt_20512_steps.zip" 
+    # =========================================================================
+
+    # 1. 에이전트 생성 시 경로 주입 (이제 모든 Callback이 이 경로를 봅니다)
+    cfg = AgentConfig()
+    agent = MaskablePPOAgent(cfg=cfg, override_log_dir=LOG_DIR_ROOT)
+    
+    # Logger 다시 세팅 (확실하게 하기 위해)
+    new_logger = configure(str(agent.log_dir), ["stdout", "csv", "tensorboard"])
+    agent.model.set_logger(new_logger)
+
+    # 2. 자동 이어하기 로직
+    # 우선 AutoResume 폴더 안에 있는 가장 최신 ckpt 찾기
+    new_checkpoints = glob.glob(os.path.join(LOG_DIR_ROOT, "*.zip"))
+    
+    target_ckpt = None
+    target_history_dir = None
+
+    if new_checkpoints:
+        # A. AutoResume 폴더에 파일이 있음 -> 무한 루프가 돌고 있다는 뜻
+        #    가장 최신 모델을 로드하고, 히스토리도 AutoResume 폴더에서 읽음
+        target_ckpt = max(new_checkpoints, key=os.path.getctime)
+        target_history_dir = LOG_DIR_ROOT  # ★ 여기가 중요! 자기 자신 폴더를 봄
+        print(f"🔄 [Auto-Resume] Found ongoing checkpoint: {target_ckpt}")
+
+    elif os.path.isfile(SPECIFIC_START_MODEL):
+        # B. AutoResume은 비어있지만, 사용자가 지정한 시작 파일이 있음 (첫 이사)
+        target_ckpt = SPECIFIC_START_MODEL
+        # 히스토리는 '이사 오기 전' 폴더에서 가져옴
+        target_history_dir = str(Path(SPECIFIC_START_MODEL).parent)
+        print(f"🔄 [Start] Importing model from: {target_ckpt}")
+        print(f"🔄 [Start] Importing history from: {target_history_dir}")
+        
+        # (선택) 첫 이사 때만 히스토리 파일 복사해오기 (안전빵)
+        try:
+            old_csv = Path(target_history_dir) / "dataset_history.csv"
+            new_csv = Path(LOG_DIR_ROOT) / "dataset_history.csv"
+            if old_csv.exists() and not new_csv.exists():
+                shutil.copy2(old_csv, new_csv)
+                print("📦 Copied history CSV to new home.")
+        except Exception as e:
+            print(f"⚠️ History copy failed: {e}")
+
+    else:
+        # C. 아무것도 없음 -> 쌩 처음
+        print("🆕 [Start] No checkpoint found. Starting fresh training.")
+
+    # 3. 모델 & 히스토리 로드
+    if target_ckpt:
+        try:
+            # history_dir를 명시적으로 넘김
+            agent.loadModel(target_ckpt, history_dir=target_history_dir)
+            
+            # Timesteps 복구
+            match = re.search(r"(\d+)_steps", str(target_ckpt))
+            if not match: match = re.search(r"ckpt_(\d+)", str(target_ckpt))
+            
+            if match:
+                prev_steps = int(match.group(1))
+                agent.model.num_timesteps = prev_steps
+                print(f"✅ Set model.num_timesteps to {prev_steps}")
+
+                # Rollout Index 복구
+                steps_per_rollout = cfg.n_envs_train * cfg.n_steps
+                restored_rollout_idx = prev_steps // steps_per_rollout
+                
+                for cb in agent.callbacks.callbacks:
+                    if isinstance(cb, TrainsetSchedulingCallback):
+                        cb.rollout_idx = restored_rollout_idx + 1
+                        print(f"✅ Restored rollout_idx to {cb.rollout_idx}")
+                        break
+
+        except Exception as e:
+            print(f"❌ Final load failed: {e}")
+            exit(1)
+
+    # 4. 학습 실행
+    CHUNK_SIZE = cfg.n_envs_train * cfg.n_steps * 4 # 원하는 만큼 조절
+    print(f"🚀 Training chunk for {CHUNK_SIZE} steps...")
+
+    agent.model.learn(
+        total_timesteps=CHUNK_SIZE,
+        callback=agent.callbacks,
+        reset_num_timesteps=False, 
+        progress_bar=True
+    )
+    
+    # 5. 저장 (AutoResume 폴더에 저장됨)
+    save_path = agent.log_dir / f"ppo_ckpt_{agent.model.num_timesteps}_steps.zip"
+    agent.model.save(str(save_path))
+    
+    # 히스토리 강제 저장 (HistorySaverCallback이 해주지만 안전하게 한 번 더)
+    agent.history.save_csv(str(agent.log_dir / "dataset_history.csv"))
+    
+    print(f"✅ Chunk finished. Saved to {save_path}. Exiting...")
