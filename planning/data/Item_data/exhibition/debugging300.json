@@ -1,26 +1,50 @@
 [
     {
-        "partno": "2",
-        "name": "white_cube",
+        "partno": "0",
+        "name": "",
         "objshape": "cube",
-        "width": 160.0,
-        "height": 155.0,
-        "depth": 95.0,
+        "width": 210.0,
+        "height": 200.0,
+        "depth": 100.0,
         "rotation_quat": [
+            0.7071068,
             0.0,
             0.0,
-            0.0,
-            1.0
+            0.7071068
         ],
         "priority": 1,
         "updown": false,
-        "weight": 0.47,
-        "loadbear": 496.0,
+        "weight": 0.84,
+        "loadbear": 8.0,
         "unit": "mm",
         "b_position": [
+            256.0,
+            196.0,
+            270.0
+        ]
+    },
+    {
+        "partno": "0",
+        "name": "",
+        "objshape": "cube",
+        "width": 200.0,
+        "height": 200.0,
+        "depth": 110.0,
+        "rotation_quat": [
+            0.7071068,
             0.0,
-            214.0,
-            245.0
+            0.0,
+            0.7071068
+        ],
+        "priority": 1,
+        "updown": false,
+        "weight": 0.88,
+        "loadbear": 8.0,
+        "unit": "mm",
+        "b_position": [
+            256.0,
+            196.0,
+            370.0
         ]
     }
 ]

@@ -1,7 +1,18 @@
 # utils/painter/painter_plot.py
+import os, sys
 import matplotlib
 # matplotlib.use('TkAgg')  # 🚀 GUI 창을 띄울 수 있도록 강제 설정
 matplotlib.use('Agg')  # 화면 출력 없이 파일로 저장하는 백엔드
+
+# When both a system matplotlib and a pip-installed matplotlib exist (e.g. Ubuntu
+# system package vs. pip), `mpl_toolkits` can resolve to the system path even
+# though `matplotlib` itself was loaded from pip.  Force them to the same parent.
+import mpl_toolkits as _mpl_toolkits
+_mpl_parent = os.path.dirname(os.path.dirname(matplotlib.__file__))
+_correct_path = os.path.join(_mpl_parent, "mpl_toolkits")
+if os.path.isdir(_correct_path) and _correct_path not in _mpl_toolkits.__path__:
+    _mpl_toolkits.__path__ = [_correct_path]
+
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib import pyplot as plt
 from matplotlib.patches import Rectangle, Circle

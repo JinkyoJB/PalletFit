@@ -7,7 +7,12 @@ from typing import Deque, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 import numpy as np
 import torch as th
+from torch.distributions import Distribution
 from sb3_contrib.ppo_mask import MaskablePPO
+
+# PyTorch 2.11+에서 validate_args=True가 기본값으로 바뀌어 MaskableCategorical에서
+# Simplex 검증 오류가 발생할 수 있음 → 학습 환경과 동일하게 False로 설정
+Distribution._validate_args = False
 
 from planning.bin import Bin
 from planning.item import Item
@@ -130,6 +135,11 @@ class PalletFitRLAdapter:
             "act_mask": self._last_mask.astype(np.float32),
             "act_cands": self._last_cands.astype(np.float32),
         }
+
+        # NaN/Inf 방어: observation에 비정상 값이 있으면 0으로 교체
+        for k, v in obs.items():
+            if isinstance(v, np.ndarray) and not np.isfinite(v).all():
+                obs[k] = np.nan_to_num(v, nan=0.0, posinf=1.0, neginf=0.0)
 
         # 5. RL 추론
         with th.no_grad():

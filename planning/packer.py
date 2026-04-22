@@ -1,53 +1,114 @@
 # planning/packer.py
-from collections import Counter
+# from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
-_render_pool = ThreadPoolExecutor(max_workers=2)
 
-from motion.network_element import LogicalState
+from planning._stubs import LogicalState, dsr, N_detection
 from planning.bin import Bin
 from planning.item import Item, RotationType
 from planning.BinSpecsDict import BIN_SPECS as _BIN_SPECS
 
-from utils.item_utils import Item_b2w_position, shift_bin_w2b_position, shift_bin_coor2world
-from utils.get_value import get_direction_overlap, flat_surface_weight, get_distance
-from utils.util_functions import Log, load_offline_data, str_norm 
+import utils.item_utils
+from utils.get_value import (
+    get_direction_overlap,
+    flat_surface_weight,
+    get_distance,
+)
+from utils.util_functions import Log, load_offline_data, str_norm
 from utils.constants import EPS
 from utils.util_functions import dump_items_to_json
 from utils.overlap import aabb_bounds_xyz, compute_overlap_area
 
 from dataclasses import asdict, dataclass
 from planning.itemManager import global_item_manager
-import json, random, importlib, time, copy
+import json
+import random
+import importlib
+import copy
 import numpy as np
 
 from scipy.spatial.transform import Rotation as R
 
-import dsrpy as dsr
-from detection.N_detection import N_detection
-
+_render_pool = ThreadPoolExecutor(max_workers=2)
 
 # ====== [B] 레이블 상수 (문자열) ======
 PROBLEMS = {"OFFLINE", "ONLINE_GIVEN_TYPE", "ONLINE", "EXHIBITION"}
-MODES    = {"PALLETIZING", "BINPACKING"}
+MODES = {"PALLETIZING", "BINPACKING"}
 
 # ====== [C] 모델 레지스트리(간단 메타) ======
 MODEL_REGISTRY = {
-    "FFD":       {"module": "planning.heuristics.FFD",                       "cls": "FFD",                  "init": {}, "kind":"heuristic", "supports_online_stream": True},
-    "FFD_Z":     {"module": "planning.heuristics.FFD_Z",                     "cls": "FFD_Z",                "init": {}, "kind":"heuristic", "supports_online_stream": True},
-    "FFD_M":     {"module": "planning.heuristics.FFD_M",                     "cls": "FFD_M",                "init": {}, "kind":"heuristic", "supports_online_stream": True},
-    "SingleFit": {"module": "planning.heuristics.SingleFit.SingleFit",                 "cls": "SingleFit",            "init": {}, "kind":"heuristic", "supports_online_stream": True},
-    "ZoneFit":   {"module": "planning.heuristics.ZoneFit.ZoneFit",           "cls": "ZoneFit",              "init": {}, "kind":"heuristic", "supports_online_stream": True},
-    "BestFit":   {"module": "planning.heuristics.BestFit.BestFit",           "cls": "BestFit",              "init": {}, "kind":"heuristic", "supports_online_stream": True},
-    "OutlineFit":{"module": "planning.heuristics.OutlineFit.OutlineFit",     "cls": "OutlineFit",           "init": {}, "kind":"heuristic", "supports_online_stream": True},
-    "SafeFit":   {"module": "planning.heuristics.SafeFit",                   "cls": "SafeFit",              "init": {}, "kind":"heuristic", "supports_online_stream": True},
-    "PalletFit": {"module": "planning.heuristics.PalletFit.PalletFit_v2",              "cls": "PalletFit",            "init": {}, "kind":"heuristic", "supports_online_stream": True},
+    "FFD": {
+        "module": "planning.heuristics.FFD",
+        "cls": "FFD",
+        "init": {},
+        "kind": "heuristic",
+        "supports_online_stream": True
+    },
+    "FFD_Z": {
+        "module": "planning.heuristics.FFD_Z",
+        "cls": "FFD_Z",
+        "init": {},
+        "kind": "heuristic",
+        "supports_online_stream": True
+    },
+    "FFD_M": {
+        "module": "planning.heuristics.FFD_M",
+        "cls": "FFD_M",
+        "init": {},
+        "kind": "heuristic",
+        "supports_online_stream": True
+    },
+    "SingleFit": {
+        "module": "planning.heuristics.SingleFit.SingleFit",
+        "cls": "SingleFit",
+        "init": {},
+        "kind": "heuristic",
+        "supports_online_stream": True
+    },
+    "ZoneFit": {
+        "module": "planning.heuristics.ZoneFit.ZoneFit",
+        "cls": "ZoneFit",
+        "init": {},
+        "kind": "heuristic",
+        "supports_online_stream": True
+    },
+    "BestFit":   {
+        "module": "planning.heuristics.BestFit.BestFit",
+        "cls": "BestFit",
+        "init": {},
+        "kind": "heuristic",
+        "supports_online_stream": True
+    },
+    "OutlineFit": {
+        "module": "planning.heuristics.OutlineFit.OutlineFit",
+        "cls": "OutlineFit",
+        "init": {},
+        "kind": "heuristic",
+        "supports_online_stream": True
+    },
+    "SafeFit": {
+        "module": "planning.heuristics.SafeFit",
+        "cls": "SafeFit",
+        "init": {},
+        "kind": "heuristic",
+        "supports_online_stream": True
+    },
+    "PalletFit": {
+        "module": "planning.heuristics.PalletFit.PalletFit_v2",
+        "cls": "PalletFit",
+        "init": {},
+        "kind": "heuristic",
+        "supports_online_stream": True
+    },
     "PalletFit_RL": {
         "module": "planning.RL.PalletFit_RL.rl_adapter",
         "cls": "PalletFitRLAdapter",
         "init": {
-            "weight_file_dir": "planning/RL/PalletFit_RL/logs/MaskablePPO_AutoResume_done/ppo_ckpt_12251136_steps_29_29.zip",
-            "selectable_len" : 3,
-            "cands_option"  : 'EDP',  # 'EDP', 'CP', 'EP', 'EMS'
+            "weight_file_dir": (
+                "planning/RL/PalletFit_RL/weight_files/"
+                "ppo_ckpt_1265856_steps.zip"
+            ),
+            "selectable_len": 3,
+            "cands_option": 'EDP',  # 'EDP', 'CP', 'EP', 'EMS'
         },
         "kind": "rl",
         "supports_online_stream": True,
@@ -65,12 +126,15 @@ MODEL_REGISTRY = {
         "kind": "heuristic",
         "supports_online_stream": True,
     },
-"DRL": {
+    "DRL": {
         "module": "planning.adapters.drl_adapter",
         "cls": "DRLAdapter",
         "init": {
             "drl_path": "planning/adapters/external/DRL_Repo",
-            "model_path": 'planning/adapters/external/DRL_Repo/pretrained_models/default_rs.pt', 
+            "model_path": (
+                "planning/adapters/external/DRL_Repo/"
+                "pretrained_models/default_rs.pt"
+            ),
             "device": "cuda",
             "resolution": 90,
         },
@@ -81,11 +145,22 @@ MODEL_REGISTRY = {
 
 # ====== [D] 호환성 매트릭스: (problem, mode) -> 허용 모델 set ======
 COMPAT = {
-    ("OFFLINE",           "BINPACKING"):  {"FFD","FFD_Z","FFD_M","SingleFit","ZoneFit","BestFit","OutlineFit","SafeFit","PalletFit","DQN", "SafeFit"},
-    ("OFFLINE",           "PALLETIZING"): {"FFD","FFD_Z","FFD_M","SingleFit","ZoneFit","BestFit","OutlineFit","SafeFit","PalletFit","DQN", "SafeFit"},
-    ("ONLINE_GIVEN_TYPE", "PALLETIZING"): {"BestFit","FFD_Z", "PalletFit","PalletFit_RL", "OutlineFit"},
-    ("ONLINE",          "PALLETIZING"): {"FFD","FFD_Z","FFD_M","PalletFit_RL","SingleFit","ZoneFit","BestFit","OutlineFit","SafeFit","PalletFit","DQN", "SafeFit"},
-    ("EXHIBITION",        "PALLETIZING"): {"OutlineFit"},
+    ("OFFLINE", "BINPACKING"): {
+        "FFD", "FFD_Z", "FFD_M", "SingleFit", "ZoneFit", "BestFit",
+        "OutlineFit", "SafeFit", "PalletFit", "DQN"
+    },
+    ("OFFLINE", "PALLETIZING"): {
+        "FFD", "FFD_Z", "FFD_M", "SingleFit", "ZoneFit", "BestFit",
+        "OutlineFit", "SafeFit", "PalletFit", "DQN"
+    },
+    ("ONLINE_GIVEN_TYPE", "PALLETIZING"): {
+        "BestFit", "FFD_Z", "PalletFit", "PalletFit_RL", "OutlineFit"
+    },
+    ("ONLINE", "PALLETIZING"): {
+        "FFD", "FFD_Z", "FFD_M", "PalletFit_RL", "SingleFit", "ZoneFit",
+        "BestFit", "OutlineFit", "SafeFit", "PalletFit", "DQN"
+    },
+    ("EXHIBITION", "PALLETIZING"): {"OutlineFit"},
 }
 
 
@@ -105,9 +180,9 @@ class Packer(LogicalState):
             partno=-1,
             name='gripper',
             objshape='cube',
-            width = 0.1, 
-            height = 0.1,
-            depth = 0.1,   #그리퍼에 달린 아이템은 들어갈 수 있어야함.
+            width=0.1,
+            height=0.1,
+            depth=0.1,  # 그리퍼에 달린 아이템은 들어갈 수 있어야함.
             level=1,
             updown=False,
             unit='mm',
@@ -116,12 +191,20 @@ class Packer(LogicalState):
         self.ui = kwargs.get('ui', None)    # GUI object
         # ------------ 아이템 관련 ------------
         self.problem = kwargs.get('problem', 'online')
-        self.packing_mode = kwargs.get('packing_mode', 'palletizing')  # default: packingModel에 따라 packing, custom: custom packingModel 사용
-        self.model = kwargs.get('model', "PalletFit_RL")                          # online_given_type: 주어진 item type_list 중에서 random하게 item을 생성하여 packing, offline: 주어진 item list를 packing
+        # default: packingModel에 따라 packing, custom: custom packingModel
+        self.packing_mode = kwargs.get('packing_mode', 'palletizing')
+        # online_given_type: 주어진 item type_list 중에서 random하게 item을
+        # 생성하여 packing, offline: 주어진 item list를 packing
+        self.model = kwargs.get('model', "PalletFit_RL")
         self.offline_item_path = kwargs.get('offline_item_path', None)
-        self.online_item_type_path = kwargs.get('online_item_type_path', None)  # GUI에서 사용안함. online_given_type에서 사용
-        self.direct_item_list = kwargs.get('direct_item_list', None)            # GUI에서 사용안함.
-        self.cands_option = kwargs.get('cands_option', 'EDP')  # 'EDP', 'CP', 'EP', 'EMS' 중 하나
+        # GUI에서 사용안함. online_given_type에서 사용
+        self.online_item_type_path = kwargs.get(
+            'online_item_type_path', None
+        )
+        # GUI에서 사용안함.
+        self.direct_item_list = kwargs.get('direct_item_list', None)
+        # 'EDP', 'CP', 'EP', 'EMS' 중 하나
+        self.cands_option = kwargs.get('cands_option', 'EDP')
 
         # 정규화된 키 보관(원하면 속성으로 노출)
         self._P = str_norm(self.problem)
@@ -130,9 +213,16 @@ class Packer(LogicalState):
         # ✅ 조기 검증
         self._validate_config(self._P, self._M, self.model)
 
-        self.unfit_stop_setting = kwargs.get('unfit_stop_setting', True)    # True: unfit아이템이 생기면 packing 중단, False: unfit아이템은 list에 추가하고 다음 아이템으로 packing 계속
-        self.order_setting = kwargs.get('order_setting', False)  # True: packing 전에 아이템을 우선순위에 따라 정렬, False: packing 전에 아이템을 정렬하지 않음
-        self.rotation_type = kwargs.get('rotation_type', RotationType.BasicRotation)  # packingModel에 필요한 회전 타입
+        # True: unfit아이템이 생기면 packing 중단
+        # False: unfit아이템은 list에 추가하고 다음 아이템으로 packing 계속
+        self.unfit_stop_setting = kwargs.get('unfit_stop_setting', True)
+        # True: packing 전에 아이템을 우선순위에 따라 정렬
+        # False: packing 전에 아이템을 정렬하지 않음
+        self.order_setting = kwargs.get('order_setting', False)
+        # packingModel에 필요한 회전 타입
+        self.rotation_type = kwargs.get(
+            'rotation_type', RotationType.BasicRotation
+        )
 
         # ────────── logger 설정 ──────────
         self.log = (kwargs.get("logger", Log("planning/logs"))).write
@@ -186,23 +276,36 @@ class Packer(LogicalState):
 
     # =========== packingModel 관련 ============
     def _validate_config(self, problem: str, mode: str, model: str):
-        P = str_norm(problem); M = str_norm(mode)
+        P = str_norm(problem)
+        M = str_norm(mode)
         if P not in PROBLEMS:
-            raise ValueError(f"Unknown problem '{problem}'. Allowed: {sorted(PROBLEMS)}")
+            raise ValueError(
+                f"Unknown problem '{problem}'. "
+                f"Allowed: {sorted(PROBLEMS)}"
+            )
         if M not in MODES:
-            raise ValueError(f"Unknown packing_mode '{mode}'. Allowed: {sorted(MODES)}")
+            raise ValueError(
+                f"Unknown packing_mode '{mode}'. "
+                f"Allowed: {sorted(MODES)}"
+            )
         key = (P, M)
         if key not in COMPAT:
             raise ValueError(f"No rule for ({P}, {M}).")
         allowed = COMPAT[key]
         if model not in allowed:
-            raise ValueError(f"Model '{model}' not allowed for ({P}, {M}). Allowed: {sorted(allowed)}")
+            raise ValueError(
+                f"Model '{model}' not allowed for ({P}, {M}). "
+                f"Allowed: {sorted(allowed)}"
+            )
 
         # 온라인 문제인데 모델이 스트림 미지원이면 추가 체크
-        if P in {"ONLINE","ONLINE_GIVEN_TYPE"}:
+        if P in {"ONLINE", "ONLINE_GIVEN_TYPE"}:
             meta = MODEL_REGISTRY.get(model, {})
             if not meta.get("supports_online_stream", False):
-                raise ValueError(f"Model '{model}' does not support online stream problems.")
+                raise ValueError(
+                    f"Model '{model}' does not support "
+                    f"online stream problems."
+                )
             
     def base_model(self, base_model_name):
         # meta = MODEL_REGISTRY["PalletFit"]
@@ -240,7 +343,7 @@ class Packer(LogicalState):
         self.think_iter = 0
         self.iter = 0
 
-        self.items_list = [] # item의 상태 정보 클래스 Item을 담는 리스트
+        self.items_list = []    # item의 상태 정보 클래스 Item을 담는 리스트
         self.unfit_items = []   # packing 중에 unfit이 발생하면 저장하는 리스트
         self.item_types = []    # item의 종류
         self.bk_bin = None
@@ -266,28 +369,30 @@ class Packer(LogicalState):
 
         elif self.direct_item_list:
             self.items_list = self.direct_item_list
-            
-        else:
-            raise ValueError("Packer(): 'problem' must be one of ['online', 'offline', 'online_given_type','exhibition'].")
 
-        # ------------------ robot 관련 변수(update_robot_state 함수 return값으로 업데이트)--------------------
+        else:
+            raise ValueError(
+                "Packer(): 'problem' must be one of "
+                "['online', 'offline', 'online_given_type', 'exhibition']."
+            )
+
+        # robot 관련 변수(update_robot_state 함수 return값으로 업데이트)
         self.conveyor_items = []    # conveyor에 있는 item들의 Item1 Class List
-        self.can_packing = True # packing_complete 관련 변수
+        self.can_packing = True  # packing_complete 관련 변수
 
         # ============ robot Behavior 관련 ============
         # self.pre_position = None    # push&place 저장용 변수
         self.pre_position = None    # push&place 저장용 변수
 
-        
     def change_bin_path(self, bin_path):
         self.bin_path = bin_path
         if hasattr(self, 'bins'):
             del self.bins
-        self.bins = []  
+        self.bins = []
         self._load_bin_data(self.bin_path)
 
     def addBin(self, bin):
-        self.bins.append(bin) 
+        self.bins.append(bin)
 
     def orderBins(self):
         '''박스를 용량에 따라 정렬'''
@@ -301,8 +406,8 @@ class Packer(LogicalState):
         if self.current_bin_idx >= len(self.bins):
             return True
         return self.bins[self.current_bin_idx]
-    
-    def set_init_bin(self,bin_idx, item_list):
+
+    def set_init_bin(self, bin_idx, item_list):
         '''
         self.bins에 있던 bin중 기존에 있던 아이템 정보를 저장하는 함수
         '''
@@ -318,7 +423,6 @@ class Packer(LogicalState):
         target_bin을 바꿉니다.
         bin_items가 max_items보다 크거나 같으면, 다음 bin으로 바꿉니다.
         '''
-        
         # self.packer.bins의 길이를 확인
         bin_count = len(self.bins)
         # self.current_bin_idx를 1 증가시킵니다.
@@ -326,16 +430,11 @@ class Packer(LogicalState):
             self.current_bin_idx += 1
         else:
             self.current_bin_idx = 0
-        
+
         self.sync_targetBin_state()
 
         self.can_packing = True
 
-    def _create_bin_from_spec(self, spec: dict):
-        """spec dict -> Bin 생성 & 등록."""
-        spec = spec.copy()
-        spec["partno"] = f"BIN_{len(self.bins) + 1}"
-        self.addBin(Bin(**spec))
     def _create_bin_from_spec(self, spec: dict):
         """spec dict -> Bin 생성 & 등록."""
         spec = spec.copy()
@@ -351,14 +450,14 @@ class Packer(LogicalState):
             self._create_bin_from_spec(self.BIN_SPECS[key])
         except KeyError:
             print(f"[WARN] '{key}' spec이 없습니다: {list(self.BIN_SPECS)}")
-                
+
     def _load_bin_data(self, bin_path=None):
         '''bin_path로부터 bins를 읽어온 뒤, Bin 객체로 변환하여 저장'''
         try:
             with open(bin_path, 'r') as file:
                 bin_list = json.load(file)
                 # self.log("Loaded bins:", bin_list)
-            
+
             for bin in bin_list:
                 self.addBin(Bin(**bin))
             
@@ -392,12 +491,12 @@ class Packer(LogicalState):
             if 'A' in self.current_bin.name:
                 a_index = find_bin_index_by_substring('A')
                 bin = self.bins[a_index]
-                return Item_b2w_position(self.target_item, bin)
+                return utils.item_utils.Item_b2w_position(self.target_item, bin)
             elif 'B' in self.current_bin.name:
                 b_index = find_bin_index_by_substring('B')
                 bin = self.bins[b_index]
-                return Item_b2w_position(self.target_item, bin)
-        return Item_b2w_position(self.target_item, self.current_bin)
+                return utils.item_utils.Item_b2w_position(self.target_item, bin)
+        return utils.item_utils.Item_b2w_position(self.target_item, self.current_bin)
     
     @property
     def target_b_position(self):
@@ -434,7 +533,7 @@ class Packer(LogicalState):
         return self.conveyor_items
     
     # =========== item 관련 =============
-    def trans_itemData2Item(self,bin, items_data):
+    def trans_itemData2Item(self, bin, items_data):
         '''
         items_data를 Item class로 변환하여 반환
         '''
@@ -465,7 +564,7 @@ class Packer(LogicalState):
                 rotation_quat = RotationType.RT_WHD,
                 priority = 1,
             )
-            item.b_position = shift_bin_w2b_position(bin, item)
+            item.b_position = utils.item_utils.shift_bin_w2b_position(bin, item)
             item.options['color'] = 'blue'
 
             item_list.append(item)
@@ -774,10 +873,6 @@ class Packer(LogicalState):
 
         candidates = [it for it, k in zip(candidates, keep) if k]
 
-        
-        
-        
-        
         # 5. direction_overlap 기준 정렬
         def sort_key(it):
             get_direction_overlap(it, self.bk_bin)
@@ -808,7 +903,7 @@ class Packer(LogicalState):
         vers = self.current_bin.getVertices()
         for n, v in enumerate(vers[::-1]):
             v = [i*0.001 for i in v]    # mm ->m
-            wp = shift_bin_coor2world(self.current_bin, v, RotationType.RT_WHD)
+            wp = utils.item_utils.shift_bin_coor2world(self.current_bin, v, RotationType.RT_WHD)
             print(f'check_binSize ] {n}번째 wp : {wp}')
 
             # wp로 robot 이동
@@ -904,7 +999,7 @@ class Packer(LogicalState):
                                     f"→ ({cx:.1f}, {cy:.1f}, {cz:.1f})")
                     gr.b_position = [cx, cy, cz+20]      # 여유 10 mm
                     global_item_manager.update(gr._id, gr)
-                    w_pos = Item_b2w_position(gr, self.current_bin)
+                    w_pos = utils.item_utils.Item_b2w_position(gr, self.current_bin)
                     self.pre_position = np.concatenate([w_pos[:3],
                                         self.place_w_position[3:7]])
                     print("@@ target_position: ", self.place_w_position ,"@@")
