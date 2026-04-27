@@ -22,25 +22,16 @@ from torch.utils.tensorboard import SummaryWriter
 
 # SB3 / contrib
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.vec_env import DummyVecEnv, VecMonitor, VecEnv, SubprocVecEnv
+from stable_baselines3.common.vec_env import VecMonitor, VecEnv, SubprocVecEnv
 from stable_baselines3.common.callbacks import BaseCallback, CallbackList, CheckpointCallback, EveryNTimesteps
 from stable_baselines3.common.logger import configure
 from sb3_contrib.ppo_mask import MaskablePPO
 from sb3_contrib.common.maskable.utils import get_action_masks
 
-# ── 우리의 환경 (생성자는 seed, tb_log_dir만 받는 걸로 가정) ─────────────
+# ── 우리의 환경 ──────────────────────────────────────────────
 from planning.RL.PalletFit_RL.env import PalletFitEnv
 from planning.RL.PalletFit_RL.custom_value_policy import PointerPolicyFT, CustomCombinedExtractor
 from planning.RL.PalletFit_RL.config import ACTION_MAX_CANDIDATES, PREVIEW_MAX
-
-from planning.RL.PalletFit_RL.obs_builder import build_observation_deque, queue_head
-from planning.RL.PalletFit_RL.act_builder import rebuild_candidates, place_by_action
-from planning.itemManager import global_item_manager
-from planning.packer import Packer
-from planning.item import RotationType
-from collections import deque
-import random
-from planning.RL.PalletFit_RL.env import _generate_items_with_tsg, TSGConfig
 # =============================================================================
 # 0) 설정
 # =============================================================================
@@ -1070,31 +1061,29 @@ class HistorySaverCallback(BaseCallback):
 
 
 # =============================================================================
-# 5) Env 팩토리: seed, tb_log_dir만 전달 (디버깅: DummyVecEnv 고정)
+# 5) Env 팩토리
 # =============================================================================
 info_keys = ("SU","steps_in_ep","return","packed_count",)
 
-def make_single_env(seed: int, tb_log_dir: str):
+def make_single_env(seed: int, tb_log_dir: str, *, is_render_env: bool = False):
     def _thunk():
-        env = PalletFitEnv(seed=seed, tb_log_dir=tb_log_dir)
+        env = PalletFitEnv(seed=seed, tb_log_dir=tb_log_dir, is_render_env=is_render_env)
         return Monitor(env, info_keywords=info_keys)
     return _thunk
 
 def make_envs(*, mode: str, n_envs: int, base_seed: int, tb_log_dir: str) -> VecEnv:
     thunks = [make_single_env(base_seed + i, tb_log_dir) for i in range(n_envs)]
-    venv: VecEnv = SubprocVecEnv(thunks, start_method="spawn")  # ★ spawn 권장
-    # venv: VecEnv = DummyVecEnv(thunks)                  # 단일 프로세스, 안정
+    venv: VecEnv = SubprocVecEnv(thunks, start_method="spawn")
     venv = VecMonitor(venv, filename=str(Path(tb_log_dir) / f"monitor_{mode}"))
     return venv
 
-def make_eval_env(*, n_envs: int, base_seed: int, tb_log_dir: str, backend: str = "dummy") -> VecEnv:
-    thunks = [make_single_env(base_seed + i, tb_log_dir) for i in range(n_envs)]
-
-    if backend == "dummy":
-        venv: VecEnv = DummyVecEnv(thunks)                  # 단일 프로세스, 안정
-    else:
-        venv = SubprocVecEnv(thunks, start_method="spawn")  # 병렬 필요 시
-
+def make_eval_env(*, n_envs: int, base_seed: int, tb_log_dir: str) -> VecEnv:
+    """평가용 SubprocVecEnv. 0번 워커만 GIF 저장(is_render_env=True)."""
+    thunks = [
+        make_single_env(base_seed + i, tb_log_dir, is_render_env=(i == 0))
+        for i in range(n_envs)
+    ]
+    venv: VecEnv = SubprocVecEnv(thunks, start_method="spawn")
     venv = VecMonitor(venv, filename=str(Path(tb_log_dir) / "monitor_eval"))
     return venv
 
@@ -1118,7 +1107,7 @@ class MaskablePPOAgent:
         
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.history = DatasetHistory()
-        self._cached_eval_plans: Optional[List[List[EnvPlan]]] = None
+        self._cached_eval_plans: Optional[List[EnvPlan]] = None
 
         # 1) VecEnvs 먼저
         self.env = make_envs(
@@ -1128,12 +1117,11 @@ class MaskablePPOAgent:
             tb_log_dir=str(self.log_dir),
         )
 
-        # 평가 환경: 우선 1환경 Dummy로 안정성 체크
+        # 평가 환경: SubprocVecEnv 병렬, 0번 워커는 GIF 저장
         self.eval_env = make_eval_env(
-            n_envs=1,
+            n_envs=int(self.cfg.n_envs_eval),
             base_seed=self.cfg.seed + 10_000,
             tb_log_dir=str(self.log_dir),
-            backend="dummy",   # 병렬평가가 필요해지면 "subproc"로만 바꿔 사용
         )
 
         # 2) 모델 생성
@@ -1351,185 +1339,94 @@ class MaskablePPOAgent:
     # 간단 평가 루틴
     # ────────────────────────────────────────────────
     @th.no_grad()
-    def evaluation(self, episodes: int = 3) -> Dict[str, float]:
+    def evaluation(
+        self,
+        episodes: Optional[int] = None,
+        max_eval_steps: int = 200,
+    ) -> Dict[str, float]:
         """
-        rl_adapter와 동일한 로직(Builder 함수 사용, check=True)으로 평가를 수행합니다.
+        SubprocVecEnv 병렬 평가. 0번 워커는 자동으로 GIF를 저장한다(env 내부 처리).
+
+        Args:
+            episodes: 평가 에피소드 수. None이면 n_envs_eval(한 라운드).
+            max_eval_steps: 에피소드당 step 상한(VecEnv 한 라운드 기준 안전장치).
         """
         self.model.policy.set_training_mode(False)
-        
-        # 1. 평가용 Plan 캐싱
+
+        n_envs = int(self.eval_env.num_envs)
+        if episodes is None:
+            episodes = n_envs
+
+        # 평가 plan 캐싱(재현성). 라운드별로 라운드-사이즈만큼 잘라서 사용.
         if getattr(self, "_cached_eval_plans", None) is None:
-             print(f"Generating and caching static eval plans ({episodes} episodes)...")
-             
-             plan_maker = make_eval_plan_maker(
-                 self.cfg, 
-                 eval_offline_pool=self.cfg.eval_item_paths_pool
-             )
-             self._cached_eval_plans = plan_maker(0, episodes, current_steps=0)
-        
-        plans = self._cached_eval_plans
-        if plans is None:
-            plans = []
+            print(f"Generating and caching static eval plans ({episodes} episodes)...")
+            plan_maker = make_eval_plan_maker(
+                self.cfg,
+                eval_offline_pool=self.cfg.eval_item_paths_pool,
+            )
+            self._cached_eval_plans = plan_maker(0, episodes, current_steps=0)
+        plans: List[EnvPlan] = self._cached_eval_plans or []
 
-        su_list = []
-        packed_list = []
-        
-        # 렌더링 저장 경로 설정
-        render_dir = self.log_dir / "eval_renders"
-        render_dir.mkdir(parents=True, exist_ok=True)
+        # plan 길이 부족 시 마지막 plan 반복
+        if len(plans) < episodes and plans:
+            plans = list(plans) + [plans[-1]] * (episodes - len(plans))
 
-        # Config 상수 가져오기 (파일 상단에 import 되어 있다고 가정)
-        from planning.RL.PalletFit_RL.config import PREVIEW_MAX, ACTION_MAX_CANDIDATES
+        # NOOP 인덱스(라운드에서 이미 끝난 워커에 보낼 더미 액션)
+        try:
+            noop_idx = int(self.eval_env.get_attr("NOOP_IDX", indices=[0])[0])
+        except Exception:
+            noop_idx = int(PREVIEW_MAX * ACTION_MAX_CANDIDATES) - 1
 
-        for i, plan in enumerate(plans):
-            # ─────────────────────────────────────────────────────────────
-            # (A) 환경 구성 (Packer & Item Load)
-            # ─────────────────────────────────────────────────────────────
-            packer = Packer(rotation_type=RotationType.BasicRotation, order_setting=False)
-            
-            # 1. item_mode 확인 및 Bin Alias 결정
-            item_mode = plan.item_mode
-            if item_mode == "offline":
-                target_bin = "experiment_RL"
-            elif item_mode == "online_type":
-                target_bin = "default2"
-            else:
-                target_bin = plan.bin_alias
+        su_list: List[float] = []
+        packed_list: List[int] = []
 
-            # 2. Bin 빌드
-            try:
-                packer.build_bin(target_bin)
-            except Exception as e:
-                print(f"[WARN] Failed to build bin '{target_bin}': {e}. Fallback to 'experiment_RL'")
-                packer.build_bin("experiment_RL")
+        plan_idx = 0
+        round_idx = 0
+        while plan_idx < episodes:
+            round_size = min(n_envs, episodes - plan_idx)
 
-            packer.current_bin.margin_x = plan.bin_margin_x
-            packer.current_bin.margin_y = plan.bin_margin_y
-            
-            # 3. 아이템 생성/로드
-            item_mode = plan.item_mode
-            item_payload = plan.item_payload
-            ep_seed = int(item_payload.get("episode_seed", 0))
-            
-            random.seed(ep_seed)
-            np.random.seed(ep_seed)
-            
-            items_list = []
-            try:
-                if item_mode == "tsg":
-                    tsg_cfg_dict = item_payload.get("tsg_cfg", {})
-                    tsg_cfg = TSGConfig(**tsg_cfg_dict)
-                    items_list = _generate_items_with_tsg(tsg_cfg)
-                elif item_mode == "offline":
-                    paths = item_payload.get("offline_item_paths", [])
-                    if paths:
-                        selected_path = paths[i % len(paths)]
-                        packer.offline_item_path = selected_path
-                        packer._load_offline_data()
-                        items_list = packer.items_list
-                elif item_mode == "online_type":
-                    paths = item_payload.get("online_item_type_path", [])
-                    if paths:
-                        packer.online_item_type_path = paths[i % len(paths)]
-                        packer._load_online_item_type_data()
-                        items_list = packer.items_list
-            except Exception as e:
-                print(f"⚠️ Eval Item Load Error: {e}")
-                continue
+            # 이번 라운드 plan을 워커에 주입
+            for i in range(round_size):
+                payload = env_plan_to_payload(plans[plan_idx + i])
+                self.eval_env.env_method("apply_plan", payload, indices=[i])
 
-            if not items_list:
-                continue
+            # pending_plan 소비를 위해 강제 reset
+            obs = self.eval_env.reset()
+            done_mask = np.zeros(n_envs, dtype=bool)
+            done_mask[round_size:] = True  # 미사용 워커는 처음부터 done 취급
 
-            # ─────────────────────────────────────────────────────────────
-            # (B) 적재 루프
-            # ─────────────────────────────────────────────────────────────
-            queue = deque([it._id for it in items_list])
-            bin_obj = packer.current_bin
-            
-            # [수정] 통합된 변수 하나만 사용
-            preview_cnt = int(plan.preview_cnt)
-            
-            K = int(ACTION_MAX_CANDIDATES)
-            # [수정] PREVIEW_MAX 상수를 사용하여 TOTAL 계산
-            TOTAL = int(PREVIEW_MAX * K)
-            NOOP_IDX = TOTAL - 1
-
-            while len(queue) > 0:
-                # (1) 후보 갱신 (check=True)
-                # [수정] rebuild_candidates 인자 변경 (preview_cnt)
-                last_mask, last_cands, _ = rebuild_candidates(
-                    TOTAL=TOTAL,
-                    preview_cnt=preview_cnt,  # <--- 통합된 인자
-                    queue=queue,
-                    bin=bin_obj,
-                    K=K,
-                    NOOP_IDX=NOOP_IDX,
-                    cands_option='EDP',
-                    check=True 
-                )
-
-                if not np.any(last_mask[:NOOP_IDX]):
+            for _ in range(max_eval_steps):
+                if done_mask.all():
                     break
-
-                # (2) 관측
-                # [수정] queue_head 인자 변경
-                head_q = queue_head(preview_cnt, queue)
-                raw_obs = build_observation_deque(bin_obj=bin_obj, queue=head_q, preview_cnt=preview_cnt)
-                
-                obs_input = {k: v for k, v in raw_obs.items()}
-                obs_input["act_mask"] = last_mask.astype(np.float32)
-                obs_input["act_cands"] = last_cands.astype(np.float32)
-
-                # (3) 추론
-                with th.no_grad():
-                    action, _ = self.model.predict(
-                        obs_input,
-                        deterministic=True,
-                        action_masks=last_mask
-                    )
-                    action = int(action)
-
-                if action == NOOP_IDX:
-                    break
-
-                # (4) 실행
-                # [수정] place_by_action 인자 변경
-                ok, placed_item = place_by_action(
-                    action, 
-                    preview_cnt, # <--- 통합된 인자
-                    queue, 
-                    bin_obj, 
-                    last_mask, 
-                    last_cands, 
-                    K
+                masks = get_action_masks(self.eval_env)
+                actions, _ = self.model.predict(
+                    obs, deterministic=True, action_masks=masks
                 )
+                actions = np.asarray(actions, dtype=np.int64)
+                # 이미 끝난 워커는 NOOP으로 패딩(자동 재리셋되더라도 GIF는 안 찍힘)
+                if done_mask.any():
+                    actions[done_mask] = noop_idx
+                obs, _, dones, infos = self.eval_env.step(actions)
+                for i in range(round_size):
+                    if dones[i] and not done_mask[i]:
+                        done_mask[i] = True
+                        info = infos[i] if isinstance(infos[i], dict) else {}
+                        su_list.append(float(info.get("SU", 0.0)))
+                        packed_list.append(int(info.get("packed_count", 0)))
 
-                if ok:
-                    pass
-                    bin_obj.simplify()
-                else:
-                    break
-            
-            su_list.append(bin_obj.SU)
-            packed_list.append(bin_obj.size)
-            try:
-                # 렌더링 저장
-                now_str = datetime.datetime.now().strftime("%m%d_%H%M%S")
-                save_name = f"{now_str}_eval_ep{i:03d}_SU{bin_obj.SU:.3f}.png"
-                
-                bin_obj.render(
-                    save=True, 
-                    save_path=str(render_dir), 
-                    name=save_name,
-                    size_annotation=False,
-                    show=False
-                )
-            except Exception as e:
-                print(f"⚠️ Render failed for episode {i}: {e}")
+            # 미완료 워커는 실패로 간주 → 0.0 기록 (라운드 정합성)
+            for i in range(round_size):
+                if not done_mask[i]:
+                    print(f"[Eval] env{i} did not finish within {max_eval_steps} steps")
+                    su_list.append(0.0)
+                    packed_list.append(0)
+
+            plan_idx += round_size
+            round_idx += 1
 
         mean_su = float(np.mean(su_list)) if su_list else 0.0
         mean_packed = float(np.mean(packed_list)) if packed_list else 0.0
-        
+
         self.model.policy.set_training_mode(True)
         return {"SU": mean_su, "packed": mean_packed}
 

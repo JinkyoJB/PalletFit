@@ -16,7 +16,7 @@ def experiment2():
         raise FileNotFoundError(f"No JSON files found in {target_path}")
 
     weight_name = 'best_model_20260107'
-    result_dir = Path(f'planning/Performance_comparison/EXP2_results/{weight_name}_continuous2')
+    result_dir = Path(f'experiments/results/EXP2_results/{weight_name}_continuous2')
     result_dir.mkdir(parents=True, exist_ok=True)
     result_log_path = result_dir / 'result_log.txt'
 

@@ -186,7 +186,11 @@ PalletFit/
 │   ├── experiment1.py          # EDP/CP/EP/EMS candidate-method comparison
 │   ├── experiment2.py          # full evaluation on paper dataset
 │   ├── palletizing.py          # industrial palletizing demo
-│   └── get_test.py             # quick sanity test
+│   ├── get_test.py             # quick sanity test
+│   └── results/                # pre-computed result data & analysis scripts
+│       ├── EXP1/               # experiment1 CSV data per method
+│       ├── EXP2_results/       # experiment2 per-baseline result CSVs & scripts
+│       └── experiment1_1/      # step-level candidate count CSVs + graph.py
 │
 ├── planning/                   # core planning library
 │   ├── packer.py               # main Packer class & MODEL_REGISTRY

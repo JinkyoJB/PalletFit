@@ -14,7 +14,7 @@ def experiment1():
     generations = ["EDP+POST", "EDP", "CP", "EP", "EMS"]
 
     base_data_dir = "planning/data/Item_data/paper/customset"
-    save_dir = "planning/experiment1_1265856_steps"
+    save_dir = "experiments/results/experiment1_1265856_steps"
 
     os.makedirs(save_dir, exist_ok=True)
 
@@ -144,7 +144,7 @@ def experiment1_1():
     generations = ["EDP+POST", "EDP", "CP", "EP", "EMS"]
 
     base_data_dir = "planning/data/Item_data/paper/customset"
-    save_dir = "planning/Performance_comparison/experiment1_1"
+    save_dir = "experiments/results/experiment1_1"
 
     os.makedirs(save_dir, exist_ok=True)
 

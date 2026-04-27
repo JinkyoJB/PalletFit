@@ -1,4 +1,4 @@
-# planning/Performance_comparison/EXP2_results/Deeppack3D/baseline.py
+# experiments/results/EXP2_results/Deeppack3D/baseline.py
 
 '''
 export DP3D_PATH="$HOME/study/DeepPack3D"
@@ -18,7 +18,7 @@ lookahead = 5  # DeepPack3D의 탐색 길이
 dp3d_model = 'rl'
 
 TESTSET_DIR = Path("planning/data/Item_data/paper/testset")
-RESULT_DIR  = Path(f"planning/Performance_comparison/EXP2_results/Deeppack3D_{dp3d_model}_without_const_l{lookahead}")
+RESULT_DIR  = Path(f"experiments/results/EXP2_results/Deeppack3D_{dp3d_model}_without_const_l{lookahead}")
 RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
 

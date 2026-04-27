@@ -4,11 +4,11 @@ import os
 
 # 1. 파일 목록 및 라벨 정의
 files = {
-    'planning/Performance_comparison/experiment1_1/CP.csv': 'CP',
-    'planning/Performance_comparison/experiment1_1/EDP_post.csv': 'EDP+post',
-    'planning/Performance_comparison/experiment1_1/EDP_separated.csv': 'EDP',
-    'planning/Performance_comparison/experiment1_1/EMS.csv': 'EMS',
-    'planning/Performance_comparison/experiment1_1/EP.csv': 'EP'
+    'experiments/results/experiment1_1/CP.csv': 'CP',
+    'experiments/results/experiment1_1/EDP_post.csv': 'EDP+post',
+    'experiments/results/experiment1_1/EDP_separated.csv': 'EDP',
+    'experiments/results/experiment1_1/EMS.csv': 'EMS',
+    'experiments/results/experiment1_1/EP.csv': 'EP'
 }
 
 # 그래프 설정
@@ -62,7 +62,7 @@ plt.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.7)
 
 # 4. 저장 및 출력
 plt.tight_layout()
-output_path = 'planning/Performance_comparison/experiment1_1/candidates_comparison_plot.png'
+output_path = 'experiments/results/experiment1_1/candidates_comparison_plot.png'
 # 디렉토리가 없으면 에러가 날 수 있으므로 확인 (선택 사항)
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 

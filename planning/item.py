@@ -171,6 +171,10 @@ class Item:
         self._face_info = {}
         self.top_face_occupancy = self.width * self.height
 
+        # getDimension() 결과 캐시 (rotation/dim 바뀌면 자동 무효화)
+        self._dim_cache_key = None
+        self._dim_cache_val = None
+
     @property
     def ex(self):
         dimension = self.getDimension()
@@ -310,6 +314,13 @@ class Item:
             return [self.width, self.height, self.depth]
 
         q = self.rotation_quat
+        # 캐시 키: width/height/depth/rotation 4개. 어느 하나 바뀌면 자동 miss.
+        # rotation_quat이 list여도 tuple로 변환해 hashable + 값 비교.
+        cache_key = (self.width, self.height, self.depth,
+                     q[0], q[1], q[2], q[3])
+        if self._dim_cache_key == cache_key and self._dim_cache_val is not None:
+            return list(self._dim_cache_val)  # 안전을 위해 사본 반환
+
         if is_axis_aligned(q):
             w, h, d = self.width, self.height, self.depth
 
@@ -326,12 +337,16 @@ class Item:
                 w, d = d, w
 
             # Z축 180° 등 축정렬 나머지는 (w,h,d) 그대로
-            return [w, h, d]
+            result = [w, h, d]
+        else:
+            # ── 일반 회전 경로(축 비정렬): 안전한 AABB로 fallback ──
+            v = np.asarray(self.getVertices())
+            dims = (v.max(axis=0) - v.min(axis=0)).tolist()
+            result = [round(x, 6) for x in dims]
 
-        # ── 일반 회전 경로(축 비정렬): 안전한 AABB로 fallback ──
-        v = np.asarray(self.getVertices())
-        dims = (v.max(axis=0) - v.min(axis=0)).tolist()
-        return [round(x, 6) for x in dims]
+        self._dim_cache_key = cache_key
+        self._dim_cache_val = tuple(result)  # 내부엔 immutable로 보관
+        return result
 
 
     def getResult(self):

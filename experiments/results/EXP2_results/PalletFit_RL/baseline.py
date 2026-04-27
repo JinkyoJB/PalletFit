@@ -1,4 +1,4 @@
-# planning/Performance_comparison/EXP2_results/PalletFit_RL/baseline.py
+# experiments/results/EXP2_results/PalletFit_RL/baseline.py
 
 from planning.packer import Packer
 from planning.item import Item, RotationType
@@ -10,7 +10,7 @@ import numpy as np
 
 # 실험에 사용할 테스트셋 / 결과 폴더
 TESTSET_DIR = Path("planning/data/Item_data/paper/testset")
-RESULT_DIR  = Path("planning/Performance_comparison/EXP2_results/PalletFit_RL_with_const_l1_20251201-194455_final_model")
+RESULT_DIR  = Path("experiments/results/EXP2_results/PalletFit_RL_with_const_l1_20251201-194455_final_model")
 RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
 

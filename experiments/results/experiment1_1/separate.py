@@ -1,7 +1,7 @@
 import pandas as pd
 
 # 1. 파일 불러오기
-file_path = 'planning/Performance_comparison/experiment1_1/EDP.csv'
+file_path = 'experiments/results/experiment1_1/EDP.csv'
 df = pd.read_csv(file_path)
 
 # 2. 에피소드 구분점 찾기

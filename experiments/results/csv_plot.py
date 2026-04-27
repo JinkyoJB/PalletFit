@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # CSV 불러오기
-df = pd.read_csv("planning/Performance_comparison/EDP_clean.csv")
+df = pd.read_csv("experiments/results/EDP_clean.csv")
 
 # 확인
 print(df.head())  # 상위 5행 확인

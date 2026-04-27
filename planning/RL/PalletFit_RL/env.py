@@ -1,18 +1,21 @@
 # planning/RL/PalletFit_RL/env.py
 from __future__ import annotations
 from dataclasses import dataclass, is_dataclass
-from typing import Optional, Dict, Any, Deque, List, Tuple
+from typing import Optional, Dict, Any, Deque, List
 from pathlib import Path
 from collections import deque, defaultdict
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-import random, copy
+import random
 
 from planning.data.trainset_generator import TrainsetGenerator
-from planning.RL.PalletFit_RL.config import PREVIEW_MAX, ACTION_MAX_CANDIDATES, PIVOT_FEAT_DIM
+from planning.RL.PalletFit_RL.config import (
+    PREVIEW_MAX, ACTION_MAX_CANDIDATES, PIVOT_FEAT_DIM,
+    OBS_TOPK_DEFAULT, ITEM_FEAT_DIM, GLOBAL_FEAT_DIM,
+)
 
-from planning.RL.PalletFit_RL.reward_builder import build_reward
+from planning.RL.PalletFit_RL.reward_builder import build_reward, get_failure_penalty
 from planning.RL.PalletFit_RL.obs_builder import build_obs, make_obs_space_gym, queue_head
 from planning.RL.PalletFit_RL.act_builder import place_by_action, rebuild_candidates
 
@@ -24,6 +27,8 @@ from planning.packer import Packer
 # ─────────────────────────────────────────────────────────────
 # 랜덤 아이템 생성
 # ─────────────────────────────────────────────────────────────
+
+
 @dataclass
 class TSGConfig:
     bin_size: tuple[int, int, int] = (1000, 1000, 1000)
@@ -32,6 +37,7 @@ class TSGConfig:
     margin_y: int = 0
     min_item_mm: int = 100
     ensure_theoretical_100_su: bool = True
+
 
 def _generate_items_with_tsg(tsg_cfg: TSGConfig) -> list[Item]:
     bx, by, bz = tsg_cfg.bin_size
@@ -84,13 +90,25 @@ def _generate_items_with_tsg(tsg_cfg: TSGConfig) -> list[Item]:
 # ─────────────────────────────────────────────────────────────
 # Gym Env
 # ─────────────────────────────────────────────────────────────
+
+
 class PalletFitEnv(gym.Env):
     metadata = {"render.modes": ["human"]}
 
-    def __init__(self, *, seed: int = 0, tb_log_dir: Optional[str | Path] = None, max_retry_per_step: int = 100):
+    def __init__(
+        self,
+        *,
+        seed: int = 0,
+        tb_log_dir: Optional[str | Path] = None,
+        max_retry_per_step: int = 20,
+        is_render_env: bool = False,
+        gif_fps: int = 4,
+    ):
         super().__init__()
         self._seed = int(seed)
         self._tb_log_dir = Path(tb_log_dir) if tb_log_dir else None
+        self._is_render_env = bool(is_render_env)
+        self._gif_fps = int(gif_fps)
 
         # [수정] Config의 PREVIEW_MAX를 사용하여 차원 결정
         self._N_max = int(PREVIEW_MAX)
@@ -107,7 +125,7 @@ class PalletFitEnv(gym.Env):
         })
         self.max_steps_per_episode = 100
         
-        # [수정] 통합된 변수 초기화 (기본값: Config상수)
+        # 통합된 변수 초기화 (기본값: Config상수)
         self._preview_cnt = int(PREVIEW_MAX)
 
         self.action_space = spaces.Discrete(self._TOTAL, start=0)
@@ -128,13 +146,16 @@ class PalletFitEnv(gym.Env):
         self.packer = None
         self.queue: Deque[int] = deque()
 
-        # 액션 마스크 캐시
+        # 액션 마스크 / 직전 obs 캐시
         self._last_cands: Optional[np.ndarray] = None
         self._last_mask: Optional[np.ndarray] = None
+        self._last_obs: Optional[Dict[str, np.ndarray]] = None
 
-        # 렌더 플래그
-        self._save_render_on_done: bool = False
-        self._save_render_dir: Optional[Path] = None
+        # GIF 렌더 (eval 0번 워커 전용)
+        self._gif_capture_active: bool = False
+        self._gif_save_dir: Optional[Path] = None
+        self._gif_frames: List[np.ndarray] = []
+        self._gif_episode_idx: int = -1
 
         # 시드 적용
         random.seed(self._seed)
@@ -143,11 +164,29 @@ class PalletFitEnv(gym.Env):
         self.max_retry_per_step = max_retry_per_step
         self._current_step_retry_count = 0
 
-    # ★ 추가: 관측/마스크를 NOOP-only로 만드는 안전 상태
+        # ── reward delta용 baseline 점수 ───────────────────────
+        # build_reward가 state-based 절대 점수를 반환하므로,
+        # env가 step n과 n+1의 점수 차이를 reward로 사용한다.
+        # placement-specific 항목(alive/stab/contact)은 일회성 보너스이므로
+        # _finalize_step에서 prev_score 갱신 시 빼낸다.
+        self._prev_score: float = 0.0
+
+    # 추가: 관측/마스크를 NOOP-only로 만드는 안전 상태
     def _make_noop_only_state(self):
         self._last_mask = np.zeros((self._TOTAL,), dtype=bool)
         self._last_mask[self.NOOP_IDX] = True
         self._last_cands = np.zeros((self._TOTAL, PIVOT_FEAT_DIM), dtype=np.float32)
+
+    def _make_zero_obs(self) -> Dict[str, np.ndarray]:
+        """observation_space 형상에 맞는 0-채움 obs. invalid 에피소드 등 rebuild/obs를 돌릴 가치가 없는 경로용."""
+        return {
+            "items_topk":    np.zeros((OBS_TOPK_DEFAULT, ITEM_FEAT_DIM), dtype=np.float32),
+            "items_mask":    np.zeros((OBS_TOPK_DEFAULT,), dtype=np.float32),
+            "globals":       np.zeros((GLOBAL_FEAT_DIM,), dtype=np.float32),
+            "preview_queue": np.zeros((PREVIEW_MAX, 4), dtype=np.float32),
+            "act_mask":      self._last_mask.astype(np.float32),
+            "act_cands":     self._last_cands.astype(np.float32),
+        }
 
     # ── VecEnv/콜백에서 쓰는 헬퍼 ─────────────────────
     def get_SU(self) -> float:
@@ -182,25 +221,23 @@ class PalletFitEnv(gym.Env):
         if plan is None:
             return dict(default)
 
-        # dict인 경우
         if isinstance(plan, dict):
             item_mode = plan.get("item_mode",
-                        plan.get("item_load_mode",
-                        plan.get("mode", "offline")))
+                                 plan.get("item_load_mode",
+                                          plan.get("mode", "offline")))
 
             item_payload = dict(plan.get("item_payload",
-                                plan.get("payload", {})) or {})
+                                         plan.get("payload", {})) or {})
 
             bin_key = plan.get("bin",
-                    plan.get("bin_alias", "experiment_RL"))
+                               plan.get("bin_alias", "experiment_RL"))
 
             bin_payload = dict(plan.get("bin_payload", {}) or {})
 
-            # [수정] EnvPlan 필드 -> Payload 매핑 (preview_cnt 하나만)
             alias_map = [
                 ("bin_margin_x", "margin_x"),
                 ("bin_margin_y", "margin_y"),
-                ("preview_cnt", "preview_cnt"),  # <--- 통합된 변수 매핑
+                ("preview_cnt", "preview_cnt"),
             ]
             for src, dst in alias_map:
                 if src in plan and dst not in bin_payload:
@@ -222,11 +259,12 @@ class PalletFitEnv(gym.Env):
 
 
     # ── info 빌더 ────────────────────────────────────
+    
+    
     def _build_info(self, *, terminal_reason: Optional[str] = None) -> Dict[str, Any]:
         mode = self._plan_in_use.get("item_mode", "offline")
         ep_name = f"{mode}_ep{self._episode_idx}"
         
-        # [수정] 통합된 변수 정보 기록
         preview_cnt = int(self._preview_cnt)
         
         SU_now = float(self.get_SU())
@@ -258,25 +296,48 @@ class PalletFitEnv(gym.Env):
             self._last_mask = m
         return self._last_mask
     
-    def save_render(self, save_dir: str | Path) -> None:
-        base_dir = Path(save_dir)
-        base_dir.mkdir(parents=True, exist_ok=True)
+    def _capture_frame(self) -> None:
+        """현재 bin을 (H,W,3) uint8 ndarray로 캡처해 _gif_frames에 누적."""
+        if not self._gif_capture_active or self._bin is None:
+            return
+        try:
+            arr = self._bin.render(
+                save=False,
+                show=False,
+                return_array=True,
+                size_annotation=False,
+                write_num=False,
+            )
+            if isinstance(arr, np.ndarray) and arr.ndim == 3:
+                self._gif_frames.append(arr)
+        except Exception as e:
+            print(f"[GIF] capture failed at ep{self._episode_idx} step{self._steps_in_ep}: {e}")
 
-        self.packer.current_bin.render(
-            save=True,
-            save_path=str(base_dir),
-            name=f"ep{self._episode_idx:04d}_step{self._steps_in_ep}_SU{self._bin.SU:.3f}",
-            size_annotation=True
-        )
+    def _flush_gif(self) -> None:
+        """누적 프레임을 GIF로 저장하고 버퍼 리셋."""
+        if not self._gif_frames or self._gif_save_dir is None:
+            self._gif_frames = []
+            return
+        try:
+            import imageio.v2 as imageio
+            self._gif_save_dir.mkdir(parents=True, exist_ok=True)
+            su_now = float(self._bin.SU) if self._bin is not None else 0.0
+            name = f"ep{self._gif_episode_idx:04d}_SU{su_now:.3f}.gif"
+            out_path = self._gif_save_dir / name
+            duration = max(1.0 / float(self._gif_fps), 1e-3)
+            imageio.mimsave(str(out_path), self._gif_frames, duration=duration, loop=0)
+            print(f"[GIF] saved {out_path} ({len(self._gif_frames)} frames)")
+        except Exception as e:
+            print(f"[GIF] save failed: {e}")
+        finally:
+            self._gif_frames = []
 
     def _safe_rebuild_candidates(self, check: bool = False):
         try:
-            # [수정] rebuild_candidates 호출 인자 간소화 (preview_cnt 전달)
-            self._last_mask, \
-            self._last_cands, \
-            self._head_indices = rebuild_candidates(
+            # rebuild_candidates 호출 인자 간소화 (preview_cnt 전달)
+            self._last_mask, self._last_cands, self._head_indices = rebuild_candidates(
                 TOTAL=self._TOTAL,
-                preview_cnt=self._preview_cnt, # <--- 통합된 변수
+                preview_cnt=self._preview_cnt,
                 queue=self.queue,
                 bin=self._bin,
                 K=self._K,
@@ -306,6 +367,9 @@ class PalletFitEnv(gym.Env):
             np.random.seed(self._seed)
 
         # ── 1) 이번 에피소드에 사용할 plan 확정 ─────────────
+        # GIF 캡처는 "이번 reset이 새 pending_plan을 소비"할 때만 활성화 →
+        # SB3 자동 재리셋(같은 plan 반복) 시 중복 GIF 방지.
+        consumed_pending = self._pending_plan is not None
         if self._pending_plan is not None:
             plan = self._pending_plan
             self._pending_plan = None
@@ -317,18 +381,23 @@ class PalletFitEnv(gym.Env):
             plan = self._as_plan_dict(None)
             self._plan_in_use = plan
 
-        # 평가 태그면 렌더 저장 켜기
+        # 평가 태그(eval/eval_offline/eval_online/eval_tsg) + 0번 워커 + 새 plan 소비일 때만 GIF 캡처
         item_payload = plan.get("item_payload", {}) or {}
         tag = str(item_payload.get("tag", ""))
-        if tag == "eval" and self._tb_log_dir is not None:
-            self._save_render_on_done = True
-            self._save_render_dir = self._tb_log_dir / "eval_renders"
+        if (
+            self._is_render_env
+            and consumed_pending
+            and tag.startswith("eval")
+            and self._tb_log_dir is not None
+        ):
+            self._gif_capture_active = True
+            self._gif_save_dir = self._tb_log_dir / "eval_renders"
+            self._gif_save_dir.mkdir(parents=True, exist_ok=True)
+            self._gif_frames = []
+            self._gif_episode_idx = int(self._episode_idx)
         else:
-            self._save_render_on_done = False
-            self._save_render_dir = None
-
-        if self._save_render_on_done and self._save_render_dir is not None:
-            self._save_render_dir.mkdir(parents=True, exist_ok=True)
+            self._gif_capture_active = False
+            self._gif_frames = []
 
         # ── 2) bin 구성 ───────────────────────────────────────
         self.packer = self._build_binPacker_from_plan(plan)
@@ -337,12 +406,13 @@ class PalletFitEnv(gym.Env):
             self.packer.build_bin(plan.get("bin", "experiment_RL"))
 
         # ── 3) 아이템 리스트 빌드 ─────────────────────────
-        ok_items = self._build_items_from_plan(plan)        
+        ok_items = self._build_items_from_plan(plan)
         if not ok_items:
-            # 아이템 빌드 실패: noop-only 상태로 빠짐
-            self._safe_rebuild_candidates(check=True)
-            head_q = queue_head(self._preview_cnt, self.queue)
-            self._last_obs = build_obs(head_q, self._bin, self._last_mask, self._last_cands, self._TOTAL, self._preview_cnt)
+            # 아이템 빌드 실패: rebuild_candidates/build_obs 모두 스킵.
+            # NOOP-only 마스크 + 0-채움 obs면 충분하다 (다음 step에서 NOOP→즉시 종료).
+            self._make_noop_only_state()
+            self._last_obs = self._make_zero_obs()
+            self._prev_score = 0.0
             info = self._build_info(terminal_reason="invalid_item_build_failed")
             info["invalid_episode"] = True
             self._last_reset_meta = {
@@ -353,46 +423,59 @@ class PalletFitEnv(gym.Env):
 
         # ── 6) 정상 빌드 완료
         self._safe_rebuild_candidates(check=True)
-        
+
         head_q = queue_head(self._preview_cnt, self.queue)
         obs = build_obs(head_q, self._bin, self._last_mask, self._last_cands, self._TOTAL, self._preview_cnt)
+        self._last_obs = obs
+
+        # reward delta용 baseline 초기화 (state-only score)
+        try:
+            initial_score, _ = build_reward(self._bin, placed_item=None)
+            self._prev_score = float(initial_score)
+        except Exception:
+            self._prev_score = 0.0
+
         info = self._build_info()
         self._last_reset_meta = {
             "episode_idx": int(self._episode_idx),
             "episode_path": info["episode_path"],
         }
+        # 빈 bin 첫 프레임
+        self._capture_frame()
         return obs, info
 
     def step(self, action: int):
         # ─────────────────────────────────────────────────────────
         # 1. 초기 체크 (타임아웃, 아이템 없음 등)
         # ─────────────────────────────────────────────────────────
+        # [리팩토링] before_bin = copy.deepcopy(self._bin) 제거.
+        # build_reward가 state-based로 바뀌어 _prev_score(스칼라)로 delta를 계산.
+
         self._steps_in_ep += 1
-        before_bin = copy.deepcopy(self._bin)
 
         # 타임아웃
         if self._steps_in_ep >= self.max_steps_per_episode:
             return self._finalize_step(
-                terminated=False, truncated=True, terminal_reason="max_steps_reached", before_bin=before_bin
+                terminated=False, truncated=True, terminal_reason="max_steps_reached"
             )
         # 아이템 오링
         if len(self.queue) == 0:
-             return self._finalize_step(terminated=True, truncated=False, terminal_reason="no_items", before_bin=before_bin)
-        
+            return self._finalize_step(terminated=True, truncated=False, terminal_reason="no_items")
+
         # ─────────────────────────────────────────────────────────
         # 2. 액션 실행 시도
         # ─────────────────────────────────────────────────────────
         if action == self.NOOP_IDX:
             # NOOP은 "포기" 선언이므로 종료 처리
             return self._finalize_step(
-                terminated=True, truncated=False, terminal_reason="no_op_selected", before_bin=before_bin, failure_code="NOOP"
+                terminated=True, truncated=False, terminal_reason="no_op_selected", failure_code="NOOP"
             )
 
         # 액션 시도
         ok, result = place_by_action(
-            action, 
-            self._preview_cnt, # <--- 통합된 변수
-            self.queue, self._bin, 
+            action,
+            self._preview_cnt,
+            self.queue, self._bin,
             self._last_mask, self._last_cands, self._K
         )
 
@@ -403,17 +486,20 @@ class PalletFitEnv(gym.Env):
             placed_item = result
             self.packer.bins[self.packer.current_bin_idx] = self._bin
             if placed_item is not None:
-                try: self.queue.remove(placed_item._id)
-                except ValueError: pass
+                try:
+                    self.queue.remove(placed_item._id)
+                except ValueError:
+                    pass
             # self._bin.simplify()
 
             return self._finalize_step(
-                terminated=False, truncated=False, terminal_reason=None, before_bin=before_bin
+                terminated=False, truncated=False, terminal_reason=None,
+                placed_item=placed_item,
             )
 
         else:
             # ❌ 실패 (물리적 충돌 등): 죽이지 않고 "다시 해봐" 기회 제공
-            error_code = result # 예: -3 (FAIL_COLLISION)
+            error_code = result     # 예: -3 (FAIL_COLLISION)
             
             # (1) 마스크 끄기
             self._last_mask[action] = False
@@ -433,14 +519,13 @@ class PalletFitEnv(gym.Env):
             if all_masked or too_many_retries:
                 # 종료 시 리셋
                 self._current_step_retry_count = 0
-                
+
                 reason = "all_actions_failed" if all_masked else "max_retries_exceeded"
-                
+
                 return self._finalize_step(
-                    terminated=True, truncated=False, 
+                    terminated=True, truncated=False,
                     terminal_reason=reason,
-                    before_bin=before_bin, 
-                    failure_code="RETRY_LIMIT" # 실패 코드 전달
+                    failure_code="RETRY_LIMIT"  # 실패 코드 전달
                 )
 
             # (5) 재시도 상태 반환 (terminated=False)
@@ -451,36 +536,64 @@ class PalletFitEnv(gym.Env):
             return self._last_obs, step_penalty, False, False, info
 
     # ─────────────────────────────────────────────────────────
-    # [헬퍼] 종료 처리 함수 (클래스 메서드로 변경)
+    # [헬퍼] 종료 처리 함수
     # ─────────────────────────────────────────────────────────
-    def _finalize_step(self, *, terminated: bool, truncated: bool, terminal_reason: str | None, before_bin, failure_code=None):
-        reward, terms = build_reward(
-            before_bin=before_bin,
-            after_bin=self._bin,
-            terminated=terminated,
-            truncated=truncated,
-            finished=bool(terminal_reason in ["all_items_placed", "max_steps_reached"]),
-            failure_code=failure_code
-        )
+    def _finalize_step(
+        self,
+        *,
+        terminated: bool,
+        truncated: bool,
+        terminal_reason: str | None,
+        placed_item=None,
+        failure_code=None,
+    ):
+        # finished: "정상 진행/완료" 케이스. 그 외 terminated 사례(NOOP, RETRY_LIMIT 등)는 실패.
+        finished = bool(terminal_reason in [
+            "no_items",          # 모든 아이템 적재 완료
+            "all_items_placed",  # (호환용) 동일 의미
+            "max_steps_reached", # truncate
+        ])
+
+        if terminated and not finished:
+            # 실패 종료 → 페널티만 부여
+            reward, terms = get_failure_penalty(failure_code)
+        else:
+            # 정상 step / finished 종료 → state 점수의 delta로 reward 계산
+            curr_score, terms = build_reward(self._bin, placed_item=placed_item)
+            reward = float(curr_score - self._prev_score)
+
+            # 다음 step의 baseline은 "state-only" 점수여야 한다.
+            # 즉, 이번에 한 번 받은 placement-specific bonus(alive/stab/contact)는
+            # 다음 step prev에서 빼서 누적되지 않게 한다.
+            placement_only = (
+                terms.get("alive", 0.0)
+                + terms.get("stab_soft", 0.0)
+                + terms.get("qual_contact", 0.0)
+            )
+            self._prev_score = float(curr_score - placement_only)
+
         self._ep_return += reward
         if isinstance(terms, dict):
             for k, v in terms.items():
                 self._ep_reward_terms[k] += float(v)
 
-        # 다음 스텝을 위한 후보 생성 (check=False로 빠르게)
-        self._safe_rebuild_candidates(check=True) 
-        
-        # 관측 빌드
-        head_q = queue_head(self._preview_cnt, self.queue)        
-        self._last_obs = build_obs(head_q, self._bin, self._last_mask, self._last_cands, self._TOTAL, self._preview_cnt)
+        # terminated일 땐 SB3가 다음 obs를 쓰지 않으므로(value bootstrap은 truncated에서만)
+        # rebuild/obs 비용을 모두 스킵. 직전 _last_obs를 그대로 반환해 형상만 유지.
+        if not terminated:
+            self._safe_rebuild_candidates(check=True)
+            head_q = queue_head(self._preview_cnt, self.queue)
+            self._last_obs = build_obs(
+                head_q, self._bin, self._last_mask, self._last_cands,
+                self._TOTAL, self._preview_cnt,
+            )
         info = self._build_info(terminal_reason=terminal_reason or None)
 
-        if (terminated or truncated) and getattr(self, "_save_render_on_done", False):
-            try:
-                save_dir = getattr(self, "_save_render_dir", None)
-                if save_dir: Path(save_dir).mkdir(parents=True, exist_ok=True)
-                self.save_render(save_dir)
-            except: pass
+        # 성공적인 placement면 프레임 누적, 종료면 GIF 저장
+        if placed_item is not None:
+            self._capture_frame()
+        if (terminated or truncated) and self._gif_capture_active:
+            self._flush_gif()
+            self._gif_capture_active = False
 
         return self._last_obs, float(reward), bool(terminated), bool(truncated), info
     
@@ -512,7 +625,7 @@ class PalletFitEnv(gym.Env):
                 if not path0:
                     return False
                 self.packer.offline_item_path = path0
-                self.packer._load_offline_data() # 내부에서 self.packer.items_list 채움
+                self.packer._load_offline_data()    # 내부에서 self.packer.items_list 채움
                 
             elif item_mode == "online_type":
                 paths = item_payload.get("online_item_type_path") or []
@@ -520,7 +633,7 @@ class PalletFitEnv(gym.Env):
                 if not path0:
                     return False
                 self.packer.online_item_type_path = path0
-                self.packer._load_online_item_type_data() # 내부에서 self.packer.items_list 채움
+                self.packer._load_online_item_type_data()   # 내부에서 self.packer.items_list 채움
 
             # 3. Queue에는 아이템 객체나 인덱스가 아닌 'ID'만 저장
             self.queue = deque([it._id for it in self.packer.items_list])
@@ -548,7 +661,6 @@ class PalletFitEnv(gym.Env):
         bin_payload = plan.get("bin_payload", {}) or {}
         self.max_steps_per_episode = int(bin_payload.get("max_steps_per_episode", 100))
         
-        # [수정] 통합된 변수 로드
         self._preview_cnt = int(bin_payload.get("preview_cnt", PREVIEW_MAX))
 
         if bin_alias in BIN_SPECS:
@@ -578,4 +690,153 @@ class PalletFitEnv(gym.Env):
 
     def close(self):
         return super().close()
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 디버그 진입점: 랜덤(마스크 적용) 액션으로 env 돌려보기
+#   사용 예) python -m planning.RL.PalletFit_RL.env --episodes 3 --gif
+# ─────────────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    import argparse
+    import time
+    import traceback
+
+    parser = argparse.ArgumentParser(description="PalletFitEnv random-action debug runner")
+    parser.add_argument("--episodes", type=int, default=2, help="에피소드 수")
+    parser.add_argument("--max-steps", type=int, default=100, help="에피소드당 step 상한")
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--preview-cnt", type=int, default=3)
+    parser.add_argument("--mode", choices=["tsg", "offline", "online_type"], default="tsg",
+                        help="아이템 소스")
+    parser.add_argument("--offline-path", type=str, default=None,
+                        help="--mode offline일 때 사용할 json 경로")
+    parser.add_argument("--online-path", type=str, default=None,
+                        help="--mode online_type일 때 사용할 json 경로")
+    parser.add_argument("--gif", action="store_true",
+                        help="에피소드별 GIF 저장 (eval tag로 0번 워커 처럼 동작)")
+    parser.add_argument("--out-dir", type=str, default="planning/RL/PalletFit_RL/_debug_run",
+                        help="GIF/로그 저장 위치")
+    parser.add_argument("--bin-alias", type=str, default="experiment_RL")
+    args = parser.parse_args()
+
+    rng = np.random.default_rng(args.seed)
+
+    # GIF가 켜져 있으면 0번-워커 흉내: is_render_env=True + tag=eval_*
+    env = PalletFitEnv(
+        seed=args.seed,
+        tb_log_dir=args.out_dir if args.gif else None,
+        is_render_env=bool(args.gif),
+        gif_fps=4,
+    )
+
+    def _make_plan(ep_idx: int) -> Dict[str, Any]:
+        ep_seed = int(args.seed + ep_idx * 1000)
+        tag_prefix = "eval" if args.gif else "debug"
+        if args.mode == "tsg":
+            payload = {
+                "tsg_cfg": {
+                    "init_slice": (4, 4, 2),
+                    "min_item_mm": 100,
+                    "bin_size": (1000, 1000, 1000),
+                },
+                "episode_seed": ep_seed,
+                "tag": f"{tag_prefix}_tsg",
+            }
+        elif args.mode == "offline":
+            paths = [args.offline_path] if args.offline_path else []
+            payload = {
+                "offline_item_paths": paths,
+                "episode_seed": ep_seed,
+                "tag": f"{tag_prefix}_offline",
+            }
+        else:  # online_type
+            paths = [args.online_path] if args.online_path else []
+            payload = {
+                "online_item_type_path": paths,
+                "episode_seed": ep_seed,
+                "tag": f"{tag_prefix}_online",
+            }
+        return {
+            "item_mode": args.mode,
+            "item_payload": payload,
+            "bin": args.bin_alias,
+            "bin_payload": {
+                "preview_cnt": int(args.preview_cnt),
+                "max_steps_per_episode": int(args.max_steps),
+            },
+        }
+
+    print(f"[debug] PalletFitEnv runner | episodes={args.episodes} mode={args.mode} "
+          f"preview_cnt={args.preview_cnt} gif={args.gif}")
+    print(f"[debug] obs space keys: {list(env.observation_space.spaces.keys())}")
+    print(f"[debug] action space: {env.action_space}, NOOP_IDX={env.NOOP_IDX}")
+
+    summary = []
+    t_total = time.perf_counter()
+
+    for ep in range(args.episodes):
+        plan = _make_plan(ep)
+        env.apply_plan(plan)
+
+        try:
+            obs, info = env.reset()
+        except Exception as e:
+            print(f"[ep {ep}] reset failed: {e}")
+            traceback.print_exc()
+            continue
+
+        if info.get("invalid_episode"):
+            print(f"[ep {ep}] invalid episode (items load failed): "
+                  f"reason={info.get('terminal_reason')}")
+            continue
+
+        ep_return = 0.0
+        steps = 0
+        terminal_reason = None
+        t_ep = time.perf_counter()
+
+        for step_idx in range(args.max_steps + 5):
+            # 마스크 기반 랜덤 액션 — NOOP은 가능한 다른 액션이 있으면 피한다.
+            mask = np.asarray(env.action_masks(), dtype=bool)
+            valid = np.where(mask)[0]
+            if len(valid) == 0:
+                # 이론상 _make_noop_only_state로 NOOP은 항상 살아 있어야 함
+                action = env.NOOP_IDX
+            else:
+                non_noop = valid[valid != env.NOOP_IDX]
+                action = int(rng.choice(non_noop)) if len(non_noop) > 0 else env.NOOP_IDX
+
+            try:
+                obs, reward, terminated, truncated, info = env.step(action)
+            except Exception as e:
+                print(f"[ep {ep} step {step_idx}] step crashed on action={action}: {e}")
+                traceback.print_exc()
+                terminal_reason = "exception"
+                break
+
+            ep_return += float(reward)
+            steps += 1
+
+            if terminated or truncated:
+                terminal_reason = info.get("terminal_reason")
+                break
+
+        dt = time.perf_counter() - t_ep
+        su = float(env.get_SU())
+        packed = int(env._bin.size) if env._bin is not None else 0
+        print(f"[ep {ep}] steps={steps:3d} return={ep_return:+.3f} "
+              f"SU={su:.3f} packed={packed} reason={terminal_reason} "
+              f"({dt*1000:.0f}ms, {dt*1000/max(1, steps):.1f}ms/step)")
+        summary.append((ep, steps, ep_return, su, packed, terminal_reason))
+
+    env.close()
+
+    print("\n[debug] === summary ===")
+    print(f"{'ep':>3} {'steps':>5} {'return':>8} {'SU':>6} {'packed':>6}  reason")
+    for ep, steps, ep_return, su, packed, reason in summary:
+        print(f"{ep:>3} {steps:>5} {ep_return:>+8.3f} {su:>6.3f} {packed:>6}  {reason}")
+    if summary:
+        sus = [r[3] for r in summary]
+        print(f"[debug] mean SU = {sum(sus)/len(sus):.3f}  "
+              f"total wall time = {(time.perf_counter()-t_total):.2f}s")
     

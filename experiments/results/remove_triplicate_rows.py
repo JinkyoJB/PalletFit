@@ -14,6 +14,6 @@ def remove_triplicate_rows(input_path: str, output_path: str):
     print(f"💾 저장 위치: {output_path}")
 
 if __name__ == "__main__":
-    input_file = "planning/Performance_comparison/EDP.csv"          # 원본 파일
-    output_file = "planning/Performance_comparison/EDP_clean.csv"   # 결과 파일 이름
+    input_file = "experiments/results/EDP.csv"          # 원본 파일
+    output_file = "experiments/results/EDP_clean.csv"   # 결과 파일 이름
     remove_triplicate_rows(input_file, output_file)

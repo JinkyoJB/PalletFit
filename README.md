@@ -172,7 +172,17 @@ PalletFit/
 │   ├── experiment1.py              # EDP/CP/EP/EMS candidate-method comparison
 │   ├── experiment2.py              # full evaluation on paper dataset
 │   ├── palletizing.py              # industrial palletizing demo
-│   └── get_test.py                 # sanity test
+│   ├── get_test.py                 # sanity test
+│   └── results/                    # pre-computed result data & analysis scripts
+│       ├── EXP1/                   # experiment1 CSV data per method
+│       ├── EXP2_results/           # experiment2 per-baseline result CSVs & scripts
+│       │   ├── FFD/                # FFD_baseline.py + result CSV
+│       │   ├── PalletFit_RL/       # PalletFit_RL baseline.py + result CSVs
+│       │   ├── Deeppack3D/         # DeepPack3D baseline.py + result CSVs
+│       │   └── continuous_banila/  # continuous baseline log & cal_mean.py
+│       ├── experiment1_1/          # step-level candidate count CSVs + graph.py
+│       ├── csv_plot.py             # EDP_clean.csv visualisation
+│       └── remove_triplicate_rows.py
 │
 ├── planning/                       # core planning library
 │   ├── packer.py                   # Packer class & MODEL_REGISTRY plugin system

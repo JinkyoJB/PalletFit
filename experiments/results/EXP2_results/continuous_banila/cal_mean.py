@@ -55,7 +55,7 @@ def calculate_averages(filename):
 # 1. 위 텍스트 내용을 'data.txt'라는 파일로 저장했다고 가정합니다.
 # 2. 함수를 호출하여 결과를 확인합니다.
 
-filename = 'planning/Performance_comparison/EXP2_results/continuous_banila/result_log_banila.txt'  # 실제 파일 경로로 변경하세요
+filename = 'experiments/results/EXP2_results/continuous_banila/result_log_banila.txt'  # 실제 파일 경로로 변경하세요
 avg_packed, avg_su, std_packed, std_su = calculate_averages(filename)
 
 if avg_packed is not None:

@@ -4,8 +4,7 @@ from __future__ import annotations
 from typing import Dict, Tuple
 import numpy as np
 
-# utils.overlap에 compute_overlap_area가 있다고 가정 (없으면 아래 내부 함수 사용)
-from utils.overlap import compute_overlap_area 
+# from utils.overlap import compute_overlap_area 
 from utils.get_value import (
     balance_term_capped,
     get_direction_overlap,
@@ -53,17 +52,17 @@ PENALTY_MAP = {
     # 1. 치명적 물리 오류 (충돌, 경계 이탈) -> 매우 큰 벌점
     FAIL_OUT_OF_BOUNDS_NEG: -5.0,
     FAIL_OUT_OF_BOUNDS_POS: -5.0,
-    FAIL_COLLISION:         -5.0,
-    FAIL_NO_TOP_EMPTY:      -5.0,
+    FAIL_COLLISION: -5.0,
+    FAIL_NO_TOP_EMPTY: -5.0,
 
     # 2. 불안정성/지지력 부족 -> 중간 벌점
     FAIL_NO_SUPPORT_BOTTOM: -3.0,  # 공중 부양
-    FAIL_CG_OUTSIDE_SUPPORT: -3.0, # 무게중심 이탈
+    FAIL_CG_OUTSIDE_SUPPORT: -3.0,  # 무게중심 이탈
     FAIL_CUMULATIVE_UNSTABLE: -3.0,
 
     # 3. 기타 제약 위반 -> 기본 벌점
-    FAIL_WEIGHT_EXCEEDED:   -3.0,
-    FAIL_SUPPORT_OVERLOAD:  -3.0,
+    FAIL_WEIGHT_EXCEEDED: -3.0,
+    FAIL_SUPPORT_OVERLOAD: -3.0,
     FAIL_OVERHANG_TOO_MUCH: -2.0,
     FAIL_SUPPORT_AREA_INSUFFICIENT: -2.0,
     
@@ -74,13 +73,16 @@ PENALTY_MAP = {
 # 2. 보조 계산 함수들
 # ─────────────────────────────────────────────
 
+
 def _dead_ratio(bin_obj) -> float:
     try:
         r = float(bin_obj.get_deadVolume_ratio())
-        if not (r == r): return 0.0
+        if not (r == r):
+            return 0.0
         return max(0.0, min(1.0, r))
     except Exception:
         return 0.0
+
 
 def _calculate_support_ratio_geometric(bin_obj, item) -> float:
     """
@@ -88,7 +90,7 @@ def _calculate_support_ratio_geometric(bin_obj, item) -> float:
     현재 아이템의 바닥 지지율을 계산합니다.
     """
     # 1. 아이템 바닥 면적 계산
-    w, h, _ = item.getDimension() # (x, y, z)
+    w, h, _ = item.getDimension()   # (x, y, z)
     item_area = float(w) * float(h)
     if item_area < 1e-6:
         return 0.0
@@ -113,32 +115,35 @@ def _calculate_support_ratio_geometric(bin_obj, item) -> float:
     # bounds format: {'x': (min, max), 'y': (min, max), 'z': ...}
 
     for b_item in bottom_candidates:
-        if b_item is None: continue
+        if b_item is None: 
+            continue
         
         # 아래 물체의 윗면 정보
         _, b_top_bounds = b_item.getFaceInfo('top')
         
         # overlap_intervals 로직을 사용하여 면적 계산
         # x축 겹침 길이
-        x_overlap = max(0.0, min(item_bottom_bounds['x'][1], b_top_bounds['x'][1]) - 
-                             max(item_bottom_bounds['x'][0], b_top_bounds['x'][0]))
+        x_overlap = max(0.0, min(item_bottom_bounds['x'][1], b_top_bounds['x'][1]) - max(item_bottom_bounds['x'][0], b_top_bounds['x'][0]))
         # y축 겹침 길이
-        y_overlap = max(0.0, min(item_bottom_bounds['y'][1], b_top_bounds['y'][1]) - 
-                             max(item_bottom_bounds['y'][0], b_top_bounds['y'][0]))
+        y_overlap = max(0.0, min(item_bottom_bounds['y'][1], b_top_bounds['y'][1]) - max(item_bottom_bounds['y'][0], b_top_bounds['y'][0]))
         
         supported_area += (x_overlap * y_overlap)
 
     # 비율 반환 (최대 1.0)
     return min(1.0, supported_area / item_area)
 
+
 def _get_surface_std(bin_obj) -> float:
     counts, _ = collect_ez_stats(bin_obj)
-    if not counts: return 0.0
+    if not counts:
+        return 0.0
     heights = []
     for h, count in counts.items():
         heights.extend([h] * count)
-    if not heights: return 0.0
+    if not heights:
+        return 0.0
     return float(np.std(heights))
+
 
 def _get_contact_score(bin_obj, item) -> float:
     try:
@@ -147,103 +152,104 @@ def _get_contact_score(bin_obj, item) -> float:
     except Exception:
         return 0.0
 
-
 # ─────────────────────────────────────────────
-# 3. 메인 리워드 함수 (build_reward)
+# 3. 메인 점수 함수 (build_reward)
+# ─────────────────────────────────────────────
+#   build_reward(bin_obj, placed_item=None) - 현재 bin의 절대 점수를 반환
+#   env가 step n과 step n+1의 점수 차이로 reward를 계산.
+#   deepcopy 비용 제거 + state-based potential shaping과 동일한 효과.
 # ─────────────────────────────────────────────
 
-def build_reward(
-    *,
-    before_bin,
-    after_bin,
-    cand_item=None,
-    terminated: bool,
-    finished: bool,
-    truncated: bool = False,
-    failure_code = None  # [추가] 실패 코드 받기
-) -> Tuple[float, Dict[str, float]]:
-    
-    # ── 0) 실패 종료 처리 (Failure Handling) ───────────────────────
-    if terminated and not finished:
-        # failure_code에 따른 벌점 조회
-        penalty = PENALTY_MAP.get("default")
-        
-        if failure_code is not None:
-            if failure_code in PENALTY_MAP:
-                penalty = PENALTY_MAP[failure_code]
-            elif isinstance(failure_code, str):
-                # 문자열 에러(시스템 에러)인 경우
-                penalty = -0.005
-        
-        terms = {k: 0.0 for k in ["eff_su", "eff_dead", "stab_soft", "qual_flat", "qual_contact", "bal"]}
-        # 가능한 경우의 수만 제공할때는 penalty역할 거의 없애기
-        penalty *= 0.001
-        terms["fail"] = penalty
-        
-        # (옵션) 로그에 어떤 에러로 죽었는지 기록하고 싶다면 terms에 추가할 수도 있음
-        # terms["fail_type"] = float(failure_code) if isinstance(failure_code, int) else 0.0
-        
-        return float(penalty), terms
 
-    # ── 1) [Efficiency] 공간 효율성 (SU & Dead Volume) ────────
-    su_gain = (float(after_bin.SU) - float(before_bin.SU)) * 10.0
-    r_su = SU_WEIGHT * su_gain
+_TERM_KEYS = ("eff_su", "eff_dead", "bal", "alive", "stab_soft", "qual_contact")
 
-    dead_increase = _dead_ratio(after_bin) - _dead_ratio(before_bin)
-    r_dead = 0.0
-    if dead_increase > 1e-4:
-        r_dead = -1.0 * DEAD_WEIGHT * (dead_increase * 10.0)
 
-    # ── 2) [Stability] 안정성 소프트 제약 (Soft Constraint) ──
-    # Action Masking에 의해 이미 최소 조건은 통과했습니다.
-    # 여기서는 100% 지지에 가까울수록 0에 수렴하고, 
-    # 최소 조건에 가까울수록(불안정할수록) 음의 점수를 주는 방식을 사용합니다.
-    # 예: 지지율 1.0 -> 0점 (완벽)
-    #     지지율 0.6 -> (0.6 - 1.0) * 0.5 = -0.2점 (감점)
-    
-    r_stability = 0.0
-    if cand_item is not None:
-        # 새로 구현한 Geometric 기반 지지율 계산 함수 사용
-        support_ratio = _calculate_support_ratio_geometric(after_bin, cand_item)
-        
-        # Soft Penalty 방식: 1.0(완벽)에서 부족한 만큼 감점
-        # 효율성(SU)이 매우 크다면 이 감점을 감수하고 적재할 것입니다.
-        r_stability = (support_ratio - 1.0) * STABILITY_PENALTY_WEIGHT
+def build_reward(bin_obj, placed_item=None) -> Tuple[float, Dict[str, float]]:
+    """
+    현재 bin 상태의 절대 점수를 반환.
 
-    # ── 3) [Quality] 적재 품질 (Bonus) ────────────────────────
-    # std_before = _get_surface_std(before_bin)
-    # std_after = _get_surface_std(after_bin)
-    # flatness_gain = std_before - std_after 
-    # r_flat = FLATNESS_WEIGHT * flatness_gain
+    env에서 step n의 점수(`prev`)와 step n+1의 점수(`curr`)를 각각 계산한 뒤
+    `reward = curr - prev`로 사용한다.
 
-    # Contact Score Scaling (면적 단위라 값이 큼 -> 스케일링 필요)
-    # 아이템 바닥 면적으로 나누어 비율로 변환하거나 상수로 나눔
-    contact_val = _get_contact_score(after_bin, cand_item) if cand_item else 0.0
-    # 대략적인 스케일링 (mm^2 단위라고 가정 시 100x100=10000)
-    r_contact = CONTACT_WEIGHT * (contact_val / 10000.0) 
+    - State-based 항목(r_su, r_dead, r_bal): bin 상태에만 의존 → delta가 자연스럽게 계산됨.
+    - Placement-specific 항목(r_alive, r_stability, r_contact): placed_item이 있을 때만
+      적용. env는 step 후 prev_score에서 이 항목들을 빼서 다음 step용 baseline을 갱신한다.
 
-    # ── 4) [Balance] 무게 중심 ────────────────────────────────
-    bal_term_val = balance_term_capped(r_su, after_bin, cand_item=None)
+    Args:
+        bin_obj: 현재 bin (after-step 또는 reset 상태).
+        placed_item: 방금 놓인 아이템. None이면 placement bonus 항목 0.
+
+    Returns:
+        total_score: 항목 합계 (절대 점수).
+        terms: 항목별 분해 dict — eff_su, eff_dead, bal, alive, stab_soft, qual_contact.
+    """
+    # ── 1) State-based terms (bin 상태에만 의존) ─────────────
+    r_su = SU_WEIGHT * float(bin_obj.SU) * 10.0
+    r_dead = -1.0 * DEAD_WEIGHT * _dead_ratio(bin_obj) * 10.0
+
+    # Balance: state-based 전환에 따라 cap을 고정 reference(1.0)로 사용.
+    # (이전 design은 r_su delta에 비례한 cap이라 매 step의 balance 영향이 SU 증분에 묶여 있었음.
+    #  state-based로 바뀌면서 cap을 절대 SU에 비례시키면 후반 step에서 balance가 폭주하므로
+    #  고정 reference로 안정화. 필요 시 BALANCE_WEIGHT로 강도 조절.)
+    try:
+        bal_term_val = balance_term_capped(1.0, bin_obj, cand_item=None)
+    except Exception:
+        bal_term_val = 0.0
     r_bal = BALANCE_WEIGHT * bal_term_val
 
-    # ── 5) 최종 합산 ──────────────────────────────────────────
-    total_reward = (
-        ALIVE_BONUS 
-        + r_su 
-        + r_dead 
-        + r_stability 
-        # + r_flat 
-        + r_contact 
-        + r_bal
-    )
+    # ── 2) Placement-specific bonus (placed_item에만 의존) ──
+    r_alive = 0.0
+    r_stability = 0.0
+    r_contact = 0.0
+
+    if placed_item is not None:
+        r_alive = ALIVE_BONUS
+
+        try:
+            support_ratio = _calculate_support_ratio_geometric(bin_obj, placed_item)
+            r_stability = (support_ratio - 1.0) * STABILITY_PENALTY_WEIGHT
+        except Exception:
+            r_stability = 0.0
+
+        try:
+            contact_val = _get_contact_score(bin_obj, placed_item)
+            r_contact = CONTACT_WEIGHT * (contact_val / 10000.0)
+        except Exception:
+            r_contact = 0.0
+
+    # ── 3) 합산 ──────────────────────────────────────────────
+    total_score = r_su + r_dead + r_bal + r_alive + r_stability + r_contact
 
     terms: Dict[str, float] = {
-        "eff_su": float(r_su),
-        "eff_dead": float(r_dead),
-        "stab_soft": float(r_stability),
-        # "qual_flat": float(r_flat),
+        "eff_su":       float(r_su),
+        "eff_dead":     float(r_dead),
+        "bal":          float(r_bal),
+        "alive":        float(r_alive),
+        "stab_soft":    float(r_stability),
         "qual_contact": float(r_contact),
-        "bal": float(r_bal),
     }
+    return float(total_score), terms
 
-    return float(total_reward), terms
+
+def get_failure_penalty(failure_code=None) -> Tuple[float, Dict[str, float]]:
+    """
+    실패 종료 시 페널티 반환. env가 직접 호출.
+
+    이전 build_reward의 failure 분기를 분리한 것. 정상 step의 state-delta 보상과
+    경로가 다르므로 별도 함수로 둔다.
+    """
+    penalty = PENALTY_MAP.get("default", -5.0)
+
+    if failure_code is not None:
+        if failure_code in PENALTY_MAP:
+            penalty = PENALTY_MAP[failure_code]
+        elif isinstance(failure_code, str):
+            # 문자열 에러(NOOP, RETRY_LIMIT 등 시스템 에러)
+            penalty = -0.005
+
+    # 가능한 경우의 수만 제공할 때는 penalty 역할 거의 없애기 (기존 정책 유지)
+    penalty *= 0.001
+
+    terms: Dict[str, float] = {k: 0.0 for k in _TERM_KEYS}
+    terms["fail"] = float(penalty)
+    return float(penalty), terms

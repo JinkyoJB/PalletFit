@@ -1,4 +1,4 @@
-# planning/Performance_comparison/EXP_baseline.py
+# experiments/results/EXP2_results/FFD/FFD_baseline.py
 from planning.packer import Packer
 from planning.item import Item, RotationType
 from utils.util_functions import load_offline_data
@@ -10,7 +10,7 @@ import numpy as np
 
 
 TESTSET_DIR = Path("planning/data/Item_data/paper/testset")
-RESULT_DIR  = Path("planning/Performance_comparison/EXP2_results/FFD")
+RESULT_DIR  = Path("experiments/results/EXP2_results/FFD")
 RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
 def FFD_baseline():

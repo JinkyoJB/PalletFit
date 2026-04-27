@@ -156,12 +156,15 @@ def decode_action(action: int, K: int) -> tuple[int, int]:
 # ─────────────────────────────────────────────────────────────
 # Action mask / candidates (단일 아이템용 - 기존 유지)
 # ─────────────────────────────────────────────────────────────
-def get_action_mask(bin_obj, current_item, cands_option='EDP') -> Tuple[np.ndarray, np.ndarray]:
+def get_action_mask(bin_obj, current_item, cands_option='EDP', precomputed_candidates=None) -> Tuple[np.ndarray, np.ndarray]:
     mask = np.zeros((ACTION_MAX_CANDIDATES,), dtype=bool)
     cands_arr = np.zeros((ACTION_MAX_CANDIDATES, PIVOT_FEAT_DIM), dtype=np.float32)
     feasible: list[Pivot] = []
 
-    if cands_option == 'CP':
+    if precomputed_candidates is not None:
+        # bin 상태가 동일한 여러 아이템을 처리할 때 EDP/CP/EP/EMS 후보 공유
+        candidates = precomputed_candidates
+    elif cands_option == 'CP':
         candidates = get_pivots_cp(bin_obj)
     elif cands_option == 'EP':
         candidates = get_pivots_ep(bin_obj)
@@ -221,16 +224,29 @@ def rebuild_candidates(TOTAL, preview_cnt, queue, bin, K, NOOP_IDX, cands_option
 
     # 1. 큐에서 ID들 가져오기 (preview_cnt 만큼)
     head_ids = queue_head(preview_cnt, queue)
-    
+
     # 2. ID를 이용해 최신 객체 가져오기
     look_pairs = get_look_items(head_ids)
 
+    # [최적화] bin 상태가 동일하면 EDP/CP/EP/EMS pivot 생성 결과도 동일하므로
+    # check=True 모드에서 preview_cnt번 호출하는 대신 1번만 계산해서 재사용.
+    shared_candidates = None
+    if check and look_pairs:
+        if cands_option == 'CP':
+            shared_candidates = get_pivots_cp(bin)
+        elif cands_option == 'EP':
+            shared_candidates = get_pivots_ep(bin)
+        elif cands_option == 'EMS':
+            shared_candidates = get_pivots_ems(bin)
+        else:  # 'EDP'
+            shared_candidates = Edge_Projection(bin)
+
     # 3. 마스크 생성
-    # look_pairs에 있는 아이템들에 대해서만 루프가 돌기 때문에 
+    # look_pairs에 있는 아이템들에 대해서만 루프가 돌기 때문에
     # preview_cnt보다 큐 길이가 짧은 경우도 자동으로 처리됨.
     for slot, item in look_pairs:
         if check:
-            m_i, c_i = get_action_mask(bin, item, cands_option) 
+            m_i, c_i = get_action_mask(bin, item, cands_option, precomputed_candidates=shared_candidates)
         else:
             m_i, c_i = get_action_mask_wo(bin, cands_option)
 
