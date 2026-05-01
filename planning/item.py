@@ -175,6 +175,12 @@ class Item:
         self._dim_cache_key = None
         self._dim_cache_val = None
 
+        # getVertices() / update_face_cache() 결과 캐시
+        # 키: (b_position, rotation_quat, w, h, d) — 어느 하나 바뀌면 자동 miss
+        self._verts_cache_key = None
+        self._verts_cache_val = None      # tuple(tuple(...)) — immutable
+        self._face_info_cache_key = None  # _face_info 자체가 캐시 저장소
+
     @property
     def ex(self):
         dimension = self.getDimension()
@@ -372,6 +378,15 @@ class Item:
         .0️⃣1️⃣
         원점
         """
+        # 캐시 hit: b_position/rotation/dim 모두 동일하면 재계산 스킵
+        bp = self.b_position
+        rq = self.rotation_quat
+        cache_key = (bp[0], bp[1], bp[2],
+                     rq[0], rq[1], rq[2], rq[3],
+                     self.width, self.height, self.depth)
+        if self._verts_cache_key == cache_key and self._verts_cache_val is not None:
+            return [list(v) for v in self._verts_cache_val]  # 사본(caller mutation 안전)
+
         w, h, d = map(float, (self.width, self.height, self.depth))
         local = np.array([
             [0, 0, 0],
@@ -434,6 +449,10 @@ class Item:
 
         round3 = lambda pt: [round(float(pt[0]), 3), round(float(pt[1]), 3), round(float(pt[2]), 3)]
         verts = [round3(v) for v in (reorder(bottom_sorted) + reorder(top_sorted))]
+
+        # 캐시 저장 (immutable tuple로)
+        self._verts_cache_key = cache_key
+        self._verts_cache_val = tuple(tuple(v) for v in verts)
         return verts
 
 
@@ -441,7 +460,16 @@ class Item:
         """
         회전 여부와 관계없이 AABB 기준 6 면을
         front/back/left/right/top/bottom 라벨로 고정해 캐싱.
+        b_position/rotation/dim이 그대로면 재계산 스킵.
         """
+        bp = self.b_position
+        rq = self.rotation_quat
+        cache_key = (bp[0], bp[1], bp[2],
+                     rq[0], rq[1], rq[2], rq[3],
+                     self.width, self.height, self.depth)
+        if self._face_info_cache_key == cache_key and self._face_info:
+            return  # 캐시 hit — _face_info 그대로 사용
+
         v = np.asarray(self.getVertices())
         xmin, ymin, zmin = v.min(axis=0)
         xmax, ymax, zmax = v.max(axis=0)
@@ -486,7 +514,8 @@ class Item:
                         'z': (rng['z'][0] if c<0 else rng['z'][1],)*2}
             self._face_info[name] = ((a, b, c, d), bounds)
 
-
+        # 캐시 키 갱신
+        self._face_info_cache_key = cache_key
 
     def getFaceInfo(self, direction):
         """
@@ -566,6 +595,13 @@ class Item:
         # ③  _face_info 가 빠져 있으면 빈 dict 로
         if '_face_info' not in self.__dict__:
             self._face_info = {}
+
+        # ③-b 캐시 필드 backward-compat (옛 pickle엔 없음)
+        for k in ('_dim_cache_key', '_dim_cache_val',
+                  '_verts_cache_key', '_verts_cache_val',
+                  '_face_info_cache_key'):
+            if k not in self.__dict__:
+                self.__dict__[k] = None
 
         # ④  워커 프로세스의 global_item_manager 에 재등록
         from planning.itemManager import global_item_manager

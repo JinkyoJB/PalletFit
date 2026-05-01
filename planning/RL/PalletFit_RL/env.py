@@ -15,7 +15,7 @@ from planning.RL.PalletFit_RL.config import (
     OBS_TOPK_DEFAULT, ITEM_FEAT_DIM, GLOBAL_FEAT_DIM,
 )
 
-from planning.RL.PalletFit_RL.reward_builder import build_reward, get_failure_penalty
+from planning.RL.PalletFit_RL.reward_builder import build_reward, get_failure_penalty, get_terminal_bonus
 from planning.RL.PalletFit_RL.obs_builder import build_obs, make_obs_space_gym, queue_head
 from planning.RL.PalletFit_RL.act_builder import place_by_action, rebuild_candidates
 
@@ -170,6 +170,10 @@ class PalletFitEnv(gym.Env):
         # placement-specific 항목(alive/stab/contact)은 일회성 보너스이므로
         # _finalize_step에서 prev_score 갱신 시 빼낸다.
         self._prev_score: float = 0.0
+        # term별 delta 계산용 baseline (state-only). reset/_finalize_step에서 갱신.
+        self._prev_terms: Dict[str, float] = {}
+        # 어떤 term이 placement-specific(다음 step baseline에서 빼야 함)인지
+        self._PLACEMENT_TERMS = ("alive", "stab_soft", "qual_contact")
 
     # 추가: 관측/마스크를 NOOP-only로 만드는 안전 상태
     def _make_noop_only_state(self):
@@ -428,12 +432,14 @@ class PalletFitEnv(gym.Env):
         obs = build_obs(head_q, self._bin, self._last_mask, self._last_cands, self._TOTAL, self._preview_cnt)
         self._last_obs = obs
 
-        # reward delta용 baseline 초기화 (state-only score)
+        # reward delta용 baseline 초기화 (state-only score & terms)
         try:
-            initial_score, _ = build_reward(self._bin, placed_item=None)
+            initial_score, initial_terms = build_reward(self._bin, placed_item=None)
             self._prev_score = float(initial_score)
+            self._prev_terms = {k: float(v) for k, v in initial_terms.items()}
         except Exception:
             self._prev_score = 0.0
+            self._prev_terms = {}
 
         info = self._build_info()
         self._last_reset_meta = {
@@ -555,27 +561,48 @@ class PalletFitEnv(gym.Env):
         ])
 
         if terminated and not finished:
-            # 실패 종료 → 페널티만 부여
+            # 실패 종료 → 페널티만 부여. terms는 이미 per-step 기여도이므로 그대로 누적.
             reward, terms = get_failure_penalty(failure_code)
+            delta_terms: Dict[str, float] = {k: float(v) for k, v in terms.items()}
+            # _prev_terms / _prev_score는 갱신하지 않음 (bin state 변화 없음)
         else:
-            # 정상 step / finished 종료 → state 점수의 delta로 reward 계산
+            # 정상 step / finished 종료 → state 점수의 delta로 reward 계산.
             curr_score, terms = build_reward(self._bin, placed_item=placed_item)
             reward = float(curr_score - self._prev_score)
 
+            # ── term별 delta = (curr - prev) 로 분해 ─────────────────
+            # state-based(eff_su/eff_dead/bal): prev에 동일 키가 있어 차이만큼만 기여.
+            # placement-specific(alive/stab/contact): prev에는 0(또는 미존재)이므로
+            # delta == 그 step의 전액 → reward 분해와 정확히 일치.
+            delta_terms = {
+                k: float(v) - float(self._prev_terms.get(k, 0.0))
+                for k, v in terms.items()
+            }
+
             # 다음 step의 baseline은 "state-only" 점수여야 한다.
-            # 즉, 이번에 한 번 받은 placement-specific bonus(alive/stab/contact)는
-            # 다음 step prev에서 빼서 누적되지 않게 한다.
-            placement_only = (
-                terms.get("alive", 0.0)
-                + terms.get("stab_soft", 0.0)
-                + terms.get("qual_contact", 0.0)
+            # placement-specific bonus는 일회성이므로 다음 step prev에서 빼낸다.
+            placement_only = sum(
+                terms.get(k, 0.0) for k in self._PLACEMENT_TERMS
             )
             self._prev_score = float(curr_score - placement_only)
+            # _prev_terms도 동일 원칙: state-only로 스냅샷 (placement-specific은 0으로)
+            self._prev_terms = {
+                k: (0.0 if k in self._PLACEMENT_TERMS else float(v))
+                for k, v in terms.items()
+            }
+
+            # ★ 옵션 D: finished(정상 종료/truncate) 시 terminal SU 보너스 일괄 지급.
+            #   per-step ΔSU 분배를 없앤 대신 여기서 final_SU에 비례한 큰 한 방을 줘서
+            #   진짜 목표(최종 SU)와 정책 학습 신호를 정렬.
+            if (terminated or truncated) and finished:
+                t_bonus, t_terms = get_terminal_bonus(self._bin)
+                reward += float(t_bonus)
+                for k, v in t_terms.items():
+                    delta_terms[k] = delta_terms.get(k, 0.0) + float(v)
 
         self._ep_return += reward
-        if isinstance(terms, dict):
-            for k, v in terms.items():
-                self._ep_reward_terms[k] += float(v)
+        for k, v in delta_terms.items():
+            self._ep_reward_terms[k] += float(v)
 
         # terminated일 땐 SB3가 다음 obs를 쓰지 않으므로(value bootstrap은 truncated에서만)
         # rebuild/obs 비용을 모두 스킵. 직전 _last_obs를 그대로 반환해 형상만 유지.
