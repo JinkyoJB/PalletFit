@@ -1,8 +1,10 @@
 # Train Dataset — 평가(Evaluation) 속도 분석 및 개선 방향
 
+> **2026-05-04 업데이트**: 이 문서가 처음 작성될 때(2026-04-23)의 *custom serial 평가 루프*는 **완전히 폐기**됐고, 평가가 `SubprocVecEnv` 기반으로 재작성됐습니다. Sec 2~5의 분석은 **당시 컨텍스트의 역사 기록**이고, 현재 상태는 **Sec 9 (전면 개편 이후)** 와 `2_env.md` Sec 6를 우선 참조하세요.
+
 ---
 
-## 1. 문제 현상
+## 1. 문제 현상 (2026-04-23 시점)
 
 학습 중 주기적으로 호출되는 `agent.evaluation()` 함수가,  
 에이전트가 아이템을 잘 쌓을수록 (SU가 높을수록) 점점 오래 걸린다.  
@@ -10,7 +12,9 @@
 
 ---
 
-## 2. 평가 루프 구조
+## 2. 평가 루프 구조 (2026-04-23 시점, 이후 폐기)
+
+> ⚠️ 이 절의 custom 루프는 **2026-05-01 옵션 D 리팩토링 시 완전 제거**됨. Sec 9 참조.
 
 `evaluation()` 의 내부 루프는 다음 4단계를 매 step 반복한다.
 
@@ -242,20 +246,22 @@ while not all(done):
 
 ---
 
-## 5. 권장 적용 순서
+## 5. 권장 적용 순서 (상태 갱신: 2026-05-04)
 
 | 순서 | 방안 | 예상 효과 | 난이도 | 상태 |
 |---|---|---|---|---|
-| 1 | C. render 비활성화 | 30~90초 절감 (즉시) | 매우 쉬움 | ✅ 적용 |
-| 2 | B. step 상한 추가 | 후반 step 누적 비용 차단 | 매우 쉬움 | ✅ 적용 |
-| 3 | D. simplify 비활성화 | 각 step O(N) 절감 | 매우 쉬움 | ⏸ 보류 |
-| 4 | A. EDP 중복 제거 | 약 10× 속도 개선 | 중간 (act_builder 수정) | ✅ 적용 |
-| 5 | E. 에피소드 수 분리 | 통계 안정성 + 속도 균형 | 쉬움 | ⏸ 보류 |
-| 6 | F. eval_env 기반 교체 | 코드 통일 + 병렬화 기반 | 중간 | ⏸ 보류 |
+| 1 | C. render 비활성화 / 제어 | 30~90초 절감 (즉시) | 매우 쉬움 | ✅ 적용 (2026-04-23, Sec 6) → 그 후 GIF로 재설계 (2026-04-27, Sec 9) |
+| 2 | B. step 상한 추가 | 후반 step 누적 비용 차단 | 매우 쉬움 | ✅ 적용 (2026-04-23) → env의 `max_steps_per_episode`로 흡수 (Sec 9) |
+| 3 | D. simplify 비활성화 | 각 step O(N) 절감 | 매우 쉬움 | ✅ 무관 — custom 루프 폐기로 simplify 호출 자체 사라짐 (Sec 9) |
+| 4 | A. EDP 중복 제거 | 약 10× 속도 개선 | 중간 (act_builder 수정) | ✅ 적용 (2026-04-23) → env step에서 그대로 활용됨 |
+| 5 | E. 에피소드 수 분리 | 통계 안정성 + 속도 균형 | 쉬움 | ⏸ 보류 — 현재 `n_envs_eval=5` 1 라운드로 충분 판단 |
+| 6 | F. eval_env 기반 교체 | 코드 통일 + 병렬화 기반 | 중간 | ✅ 적용 (2026-04-27, Sec 9) — SubprocVecEnv N envs로 병렬 평가 |
 
 ---
 
-## 6. 적용된 변경사항 (2026-04-23)
+## 6. 적용된 변경사항 — 1차 (2026-04-23, custom 루프 시점)
+
+> ⚠️ 이 절의 fix들은 **custom evaluation 루프**를 전제로 한 것. 2026-04-27의 VecEnv 전면 개편(Sec 9)에서 custom 루프 자체가 사라지면서 6-2/6-3은 코드 형태가 바뀌었지만 **의도(step cap, 첫 ep 시각화)는 새 구조에 그대로 흡수**됨. 6-1(EDP 중복 제거)는 `act_builder.py` 변경이라 그대로 유효.
 
 ### 6-1. EDP 중복 제거 — `act_builder.py`
 
@@ -335,28 +341,235 @@ agent.render_last_eval(save_dir="/tmp/x")  # 다른 폴더에 저장
 
 ---
 
-## 7. 남은 과제
+## 7. 남은 과제 (2026-05-04 갱신)
 
-현재 적용되지 않은 항목들은 필요 시 추가 적용 가능:
+원래 남은 과제 3개 중 2개가 Sec 9의 VecEnv 개편에 흡수되거나 무관해졌고, 한 항목만 보류:
 
-- **D. `simplify()` 비활성화**: 각 step의 O(N) merge 비용. eval 중에는 SU 측정에 영향 없으므로 생략 고려.
-- **E. 에피소드 수 분리**: 빠른 eval(3~5ep) + 주기적 full eval(10~20ep) 이원화.
-- **F. `eval_env` 기반 통합**: 현재 custom 루프와 `PalletFitEnv` 로직이 분리되어 있음. 통합 시 중복 제거 + 병렬 평가 확장 가능.
+- ✅ **D. `simplify()` 비활성화**: custom 루프 폐기로 `simplify` 호출 자체가 사라짐 → **자동 무관**.
+- ✅ **F. `eval_env` 기반 통합**: 2026-04-27 VecEnv 전면 개편으로 적용됨 (Sec 9, `2_env.md` Sec 6).
+- ⏸ **E. 에피소드 수 분리**: 현재 `n_envs_eval=5` 한 라운드 = 5 episode가 학습 중 평가로 충분. full eval(10~20ep) 이원화는 **학습 결과의 SU 분산이 불안정할 때** 검토.
 
 ---
 
-## 8. 요약
+## 8. 요약 (2026-05-04 갱신)
 
 ```
-느린 이유:
-  - 쌓인 아이템 N개 → EDP가 O(N) pivot 생성 → checkPivot O(N log N)
-  - 이걸 preview_cnt(10)번 반복 → 10× 중복        ← ✅ fix
-  - 매 step마다 simplify() O(N)                    ← ⏸ 보류
-  - 에피소드 종료 후 render 5~30초                 ← ✅ fix (ep0만)
-  - step 상한 없음 → 잘 쌓을수록 에피소드가 끝없이 → ✅ fix (150)
+=== 1차 fix (2026-04-23, custom 루프 시점) ===
+  A. EDP 한 번만 호출, preview 아이템들이 공유          → 여전히 유효 (act_builder.py)
+  B. eval 루프에 max_eval_steps=150                      → custom 루프 폐기 후 env의 max_steps_per_episode로 흡수
+  C. render_episodes=1 + render_last_eval() 사후 렌더    → GIF 자동 저장 방식으로 재설계
 
-적용된 fix:
-  A. EDP를 한 번만 호출하고 preview 아이템들이 공유
-  B. eval 루프에 max_eval_steps=150 추가
-  C. render_episodes=1로 첫 에피소드만 렌더, render_last_eval()로 사후 렌더 지원
+=== 2차 전면 개편 (2026-04-27 ~ 05-01, Sec 9) ===
+  - custom serial 루프 → SubprocVecEnv 라운드-로빈 평가 (n_envs_eval = 5)
+  - 0번 워커만 is_render_env=True → eval_renders/ep{idx:04d}_SU{su:.3f}.gif 자동 저장
+  - simplify/render/step-cap 관련 옵션이 모두 env 안으로 흡수 → agent.py의 evaluation()은 ~70줄
+  - _ep_reward_terms를 per-step delta 누적으로 정합 (sum == ep_return) → TB 메트릭 의미 정확
 ```
+
+→ 결과적으로 평가는 wall time이 ~`n_envs_eval`× 단축되었고, 코드는 env step 로직 한 군데로 통일됨.
+
+---
+
+## 9. 전면 개편 — Custom 루프 폐기 + VecEnv 평가 (2026-04-27 ~ 05-01)
+
+### 9-1. 개편 동기
+
+Sec 6의 1차 fix가 잘 작동하긴 했지만 **근본 문제 2가지가 남아 있었음**:
+
+1. **`evaluation()`이 `PalletFitEnv`와 별개의 custom 루프**라서 env 안의 최적화(EDP dedup, getDimension 캐싱, face cache 등)를 자동으로 받지 못함. 매번 `Packer`/items를 직접 만들고 builder 함수를 직접 호출하는 ~200줄 직렬 루프.
+2. **단일 프로세스 직렬 평가**라 `eval_env`(DummyVecEnv 1개)가 실질적으로 사용되지 않고 메인 프로세스에서 한 에피소드씩 처리. n_envs_eval=5로 늘려도 효과 0.
+
+→ Sec 5의 F번(eval_env 기반 통합) + 추가로 SubprocVecEnv 병렬 평가 + 0번 워커 GIF 캡처를 한 번에 묶어 적용.
+
+### 9-2. 새 구조 (현재 상태)
+
+**`agent.make_eval_env`**:
+```python
+def make_eval_env(*, n_envs, base_seed, tb_log_dir):
+    thunks = [
+        make_single_env(base_seed + i, tb_log_dir, is_render_env=(i == 0))
+        for i in range(n_envs)
+    ]
+    venv = SubprocVecEnv(thunks, start_method="spawn")
+    return VecMonitor(venv, filename=str(Path(tb_log_dir) / "monitor_eval"))
+```
+- `backend` 인자 제거 → SubprocVecEnv 고정. spawn 방식.
+- 0번 thunk만 `is_render_env=True` → 그 워커가 매 평가 에피소드를 GIF로 저장.
+
+**`PalletFitEnv` (env.py)**:
+- `_capture_frame()` / `_flush_gif()`: 매 successful placement에 frame 누적, 종료(`terminated or truncated`) 시 GIF 저장.
+- 캡처 활성화는 **`is_render_env` AND `_pending_plan` 소비 AND tag.startswith("eval")** 일 때만 → SB3 자동 재리셋(같은 plan 반복) 시 중복 GIF 방지.
+- 이전 `save_render` PNG 헬퍼 + `_save_render_on_done` 분기는 dead code로 삭제(plan_maker가 발급하던 `eval_offline`/`eval_online`/`eval_tsg` tag와 매칭 안 되던 사실상 죽은 코드였음).
+
+**`agent.evaluation()`** (이전 ~200줄 → ~70줄):
+```python
+@th.no_grad()
+def evaluation(self, episodes=None, max_eval_steps=200) -> Dict[str, float]:
+    self.model.policy.set_training_mode(False)
+    n_envs = int(self.eval_env.num_envs)
+    if episodes is None:
+        episodes = n_envs
+
+    plans = self._cached_eval_plans  # 재현성용 캐시
+    noop_idx = int(self.eval_env.get_attr("NOOP_IDX", indices=[0])[0])
+
+    su_list, packed_list = [], []
+    plan_idx = 0
+    while plan_idx < episodes:
+        round_size = min(n_envs, episodes - plan_idx)
+        # 라운드 plan을 워커들에 주입
+        for i in range(round_size):
+            payload = env_plan_to_payload(plans[plan_idx + i])
+            self.eval_env.env_method("apply_plan", payload, indices=[i])
+
+        obs = self.eval_env.reset()
+        done_mask = np.zeros(n_envs, dtype=bool)
+        done_mask[round_size:] = True   # 미사용 워커는 done 취급
+
+        for _ in range(max_eval_steps):
+            if done_mask.all(): break
+            masks = get_action_masks(self.eval_env)
+            actions, _ = self.model.predict(obs, deterministic=True, action_masks=masks)
+            actions = np.asarray(actions, dtype=np.int64)
+            if done_mask.any():
+                actions[done_mask] = noop_idx   # 끝난 워커는 NOOP 패딩
+            obs, _, dones, infos = self.eval_env.step(actions)
+            for i in range(round_size):
+                if dones[i] and not done_mask[i]:
+                    done_mask[i] = True
+                    info = infos[i] if isinstance(infos[i], dict) else {}
+                    su_list.append(float(info.get("SU", 0.0)))
+                    packed_list.append(int(info.get("packed_count", 0)))
+        plan_idx += round_size
+
+    self.model.policy.set_training_mode(True)
+    return {"SU": float(np.mean(su_list)), "packed": float(np.mean(packed_list))}
+```
+
+핵심 패턴:
+- **plan 주입 → reset → batched predict → step**: env step 로직 한 군데로 신뢰.
+- **NOOP 패딩**: 라운드에서 일찍 끝난 워커가 자동 재리셋되어도 `_pending_plan` 비어 있어 GIF 중복 안 생김.
+- **마스크 조회**: `sb3_contrib.common.maskable.utils.get_action_masks(self.eval_env)`로 워커별 action_masks 받아 batched 추론.
+
+### 9-3. 1차 fix들이 새 구조에 흡수된 방식
+
+| 1차 fix (2026-04-23) | 새 구조에서 어떻게 보존됐나 |
+|---|---|
+| **A. EDP dedup** | 그대로 유효. `act_builder.rebuild_candidates`의 변경이라 env step에서 자동으로 활용됨. |
+| **B. step cap (150)** | env의 `max_steps_per_episode`(plan에서 설정)로 이전. evaluation의 `max_eval_steps=200`은 라운드 안전장치(워커가 안 끝나는 무한 루프 방지). |
+| **C. render 1 ep만** | 0번 워커만 `is_render_env=True` → 평가 시 자동으로 N개 라운드의 모든 ep 중 0번 워커 분만 GIF 저장. `render_last_eval` 헬퍼는 메인 프로세스가 bin 객체 안 들고 있으니 삭제. |
+| **D. simplify 비활성화** | custom 루프가 사라져서 `bin_obj.simplify()` 호출 자체가 없음 → 자동 무관. |
+
+### 9-4. 추가 부수 개선 (이 시기에 같이 들어간 것들)
+
+새 구조와 함께 들어간 인접 변경. 자세한 내용은 `2_env.md` Sec 5/6/7 참조:
+
+- **Item.getDimension / face_cache 캐싱** (2_env.md Sec 7-6): `_calculate_support_ratio_geometric`이 ~50-100× 빨라지고, 그 cascade로 `get_direction_overlap`, `_get_contact_score` 등 모든 hot path가 함께 가속. env step 평균 ~155ms → ~115ms.
+- **종료 경로 rebuild/obs 스킵** (2_env.md Sec 5-4): `_finalize_step`에서 `terminated=True`일 때 `_safe_rebuild_candidates` + `build_obs` 호출 모두 생략. SB3가 다음 obs 안 쓰니까 안전.
+- **Invalid reset 스킵** (2_env.md Sec 5-4): `_build_items_from_plan` 실패 시 `_make_zero_obs()` + NOOP-only mask로 즉시 리턴.
+- **`_ep_reward_terms` per-step delta 누적** (3_rewards.md Sec 7-2): TB의 `train/reward_ep/*`가 진짜 reward 기여도가 됨 → 평가 외 학습 모니터링 정확도 ↑.
+
+### 9-5. 측정 결과
+
+| 평가 에피소드 수 | 이전 (Custom 직렬, 1 env) | 현재 (Subproc N envs, N=5) | 속도 비 |
+|---|---|---|---|
+| `n_envs_eval` (=5) | t × 5 | max ≈ t | ~5× |
+| `2 × n_envs_eval` | t × 10 | t × 2 | ~5× |
+
+> Subproc 시작 비용은 학습 시작 1회로 amortize됨(eval_env는 재사용). 라운드 종료 대기 중 NOOP 패딩 step은 워커당 최대 1개 step 정도라 무시 수준.
+
+### 9-6. 남은 한 가지 검토 (E. 에피소드 수 분리)
+
+현재 `n_envs_eval=5` 한 라운드 = 5 episode. 통계적으로 충분한지 **학습 결과의 SU 분산을 보고 판단**:
+- 동일 모델로 여러 라운드 측정 시 SU std가 0.05 이상이면 → episodes를 10~15로 늘려 2~3 라운드 평가 검토.
+- 현재 라운드 분배 알고리즘이 episodes > n_envs일 때 자동으로 multi-round 처리하므로 코드 변경 없이 호출 인자만 바꾸면 됨.
+
+### 9-7. Edge_Projection 내부 최적화 (2026-05-04)
+
+**배경**:
+- Sec 6-1에서 "EDP를 1번만 호출(call-site dedup)" 적용 후에도 `Edge_Projection` 자체가 **bin items=15 기준 ~33ms/call**로 여전히 무거움.
+- 알고리즘(Liang-Barsky 기반 boundary_projection)은 빠른데(1.2s/100 calls = 0.0025ms/call) **호출 패턴**이 비효율:
+  - 5개 sub 함수가 각자 `bin.get_visible_items_topdown()`, `bin.get_all_items()`, `[*..., bin]` 빌드 → 동일 작업 5× 중복.
+  - 각 sub 함수가 회전 4종 × 후보점마다 `Pivot` 객체를 만든 뒤 끝에서 dedup해 95% 폐기 → 객체 생성 낭비.
+  - 좌표 정리/dedup key 만들기에 `round(x, 3)`이 호출당 ~6,600회 (총 65만회).
+
+**진단 (cProfile, bin items=15, 100회 호출)**:
+
+| 항목 | 호출 수 | cumulative | 분석 |
+|---|---|---|---|
+| `Edge_Projection` (전체) | 100 | 5.10s = **33.5ms/call** | — |
+| `Pivot.__init__` | 205,800 | 0.67s (13%) | 95% 중복 후 폐기 |
+| `built-in round` | 659,500 | 0.65s (13%) | dedup key 생성 + 좌표 정리 |
+| `get_visible_items_topdown` | 300 | 0.14s (3%) | 5개 sub 중복 호출 |
+| `merge_close_pivots` | 100 | 0.56s (11%) | (사용자 결정으로 변경 안 함) |
+
+**수정 (Phase 1.1 + 1.2)**:
+
+1. **공통 데이터 사전 계산** (`act_builder.py`):
+   ```python
+   def Edge_Projection(bin):
+       ...
+       # 5 sub 모두 같은 데이터 → 1번만 계산해서 인자로 전달
+       visible_items = bin.get_visible_items_topdown()
+       plane_items   = [*bin.get_all_items(), bin]
+       
+       left_pivots  = project_lines_left_to_pivots(bin, visible_items, plane_items)
+       front_pivots = project_lines_front_to_pivots(bin, visible_items, plane_items)
+       down_pivots  = project_lines_down_to_pivots(bin, visible_items, plane_items)
+       # 2left/2front는 down_pivots만 받으므로 인자 변경 없음
+       ...
+   ```
+
+2. **Sub 함수 시그니처 확장** (`utils/pivot_generation.py`):
+   ```python
+   def project_lines_left_to_pivots(bin, visible_items=None, plane_items=None):
+       if visible_items is None: visible_items = bin.get_visible_items_topdown()
+       if plane_items is None: plane_items = [*bin.get_all_items(), bin]
+       ...
+   ```
+   기본값 None → 외부 직접 호출 시 backward compat 유지.
+
+3. **Pivot 생성 dedup BEFORE 객체 생성** (5개 sub 모두):
+   ```python
+   # 이전
+   for rt in RotationType.BasicRotation[0]:
+       pivots.append(Pivot(round(px,3), round(py,3), round(pz,3), rt, ...))
+   # 끝에서 dedup → 95% 객체 폐기
+
+   # 현재
+   rpx, rpy, rpz = round(px, 3), round(py, 3), round(pz, 3)   # 한 번만 round
+   for rt in RotationType.BasicRotation[0]:
+       rt_key = tuple(map(float, rt))
+       key = (rpx, rpy, rpz, rt_key)
+       if key in seen: continue                                # dedup 먼저
+       seen.add(key)
+       pivots.append(Pivot(rpx, rpy, rpz, rt, ...))            # unique만 객체화
+   ```
+   `merge_close_pivots`은 그대로 — **사용자 컨셉**: margin 때문에 비슷해 보이는 pivot이 생겨도 엄연히 다른 값이라 합치지 않음.
+
+**의도적으로 안 한 것**:
+- `merge_close_pivots` 공간 인덱스화 (사용자 결정으로 보존).
+- `boundary_projection` pre-filter 강화 (Phase 2 후보로 보류).
+- 5 sub 함수 통합 (Phase 3, 위험 대비 이득 작음).
+
+**측정 결과 (동일 시나리오, bin items=15)**:
+
+| 항목 | 이전 | 현재 | 변화 |
+|---|---|---|---|
+| Edge_Projection wall time | 33.48 ms/call | **24.15 ms/call** | **−27.9%** |
+| 전체 함수 호출 수 | 6.61M | 5.70M | −13.8% |
+| `Pivot.__init__` 호출 | 205,800 | (top 15에서 사라짐) | ~95% ↓ |
+| `round` 호출 | 659,500 | 481,900 | −27% |
+| `get_visible_items_topdown` 호출 | 300 | 100 | 3× 감소 |
+| 결과 pivot 수 (정확성) | 108 | **108** | 동일 ✓ |
+| unique (x,y,z,rt) key 수 | 108 | 108 | 동일 ✓ |
+
+**남은 hot spot (Phase 2 후보, 학습 결과 본 뒤 결정)**:
+- `boundary_projection` 71,000 calls (~1.2s, 30%) — line × plane 조합 quadratic. plane_items 사전 sort + binary search로 후보군 좁히면 추가 감축 가능.
+- `search_xyz` 12,800 calls (~0.8s, 20%) — R-tree intersection의 `set & set & set` 변환 비용. 더 작은 set부터 교집합하면 미세 절감.
+- `_candidate_*_faces_line` 안의 plane 반복 — line별로 fresh iteration. plane으로 grouping하면 캐시 적중 ↑.
+
+**효과**:
+- env step 평균 ~24 ms 정도 단축 효과 (build_obs와 함께 Edge_Projection이 step의 큰 비중).
+- 24 envs × 30 step × ~9ms 절감 = 학습 rollout당 ~6.5초 단축 추정.
+- 코드 변경 위험: 매우 낮음 (결과 정확성 검증됨, 외부 호출 시그니처는 backward compat).

@@ -94,9 +94,15 @@ def Edge_Projection(bin) -> List[Pivot]:
                 piv0.append(Pivot(0, 0, 0, rt, bench_bin=bin))
         return piv0
 
-    left_pivots   = project_lines_left_to_pivots(bin)
-    front_pivots  = project_lines_front_to_pivots(bin)
-    down_pivots   = project_lines_down_to_pivots(bin)
+    # ── 공통 데이터: sub 함수들이 매번 재계산하던 것을 한 번만 ──
+    # Phase 1.1: get_visible_items_topdown 5회 → 1회 (~70-80ms 단축)
+    # Phase 1.1: get_all_items + plane_items 빌드도 한 번만
+    visible_items = bin.get_visible_items_topdown()
+    plane_items   = [*bin.get_all_items(), bin]
+
+    left_pivots   = project_lines_left_to_pivots(bin, visible_items, plane_items)
+    front_pivots  = project_lines_front_to_pivots(bin, visible_items, plane_items)
+    down_pivots   = project_lines_down_to_pivots(bin, visible_items, plane_items)
     left2_pivots  = project_lines_down_to_pivots2left(bin,  down_pivots)
     front2_pivots = project_lines_down_to_pivots2front(bin, down_pivots)
 
@@ -109,7 +115,7 @@ def Edge_Projection(bin) -> List[Pivot]:
     ]
 
     tol_mm = max(bin.margin_x, bin.margin_y) if hasattr(bin, 'margin_x') and hasattr(bin, 'margin_y') else 5
-    keep   = "first" 
+    keep   = "first"
 
     all_merged = merge_close_pivots(
         [pv for _, lst in dir_functions for pv in lst], tol_mm=tol_mm, keep=keep

@@ -7,8 +7,8 @@ def get_test(problem_type, model):
     packer = Packer(
         problem=problem_type,
         bin_path='planning/data/Bin_data/Margin_bin.json',
-        offline_item_path='planning/data/Item_data/trainset/single_case_8000ea_60.json',
-        online_item_type_path='planning/data/trainset.json_bin450450200_seed20250.json',
+        recorded_path='planning/data/Item_data/trainset/single_case_8000ea_60.json',
+        type_sampled_path='planning/data/trainset.json_bin450450200_seed20250.json',
         direct_item_list='planning/data/Item_data/trainset/RectangularPrism_100ea_2.json',
         unfit_stop_setting=True,
         order_setting=False,

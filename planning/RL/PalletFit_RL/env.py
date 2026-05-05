@@ -9,7 +9,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import random
 
-from planning.data.trainset_generator import TrainsetGenerator
+from planning.data.data_sources import DataSource, make_source
 from planning.RL.PalletFit_RL.config import (
     PREVIEW_MAX, ACTION_MAX_CANDIDATES, PIVOT_FEAT_DIM,
     OBS_TOPK_DEFAULT, ITEM_FEAT_DIM, GLOBAL_FEAT_DIM,
@@ -25,68 +25,7 @@ from planning.BinSpecsDict import BIN_SPECS
 from planning.packer import Packer
 
 # ─────────────────────────────────────────────────────────────
-# 랜덤 아이템 생성
-# ─────────────────────────────────────────────────────────────
-
-
-@dataclass
-class TSGConfig:
-    bin_size: tuple[int, int, int] = (1000, 1000, 1000)
-    init_slice: tuple[int, int, int] = (4, 4, 1)
-    margin_x: int = 0
-    margin_y: int = 0
-    min_item_mm: int = 100
-    ensure_theoretical_100_su: bool = True
-
-
-def _generate_items_with_tsg(tsg_cfg: TSGConfig) -> list[Item]:
-    bx, by, bz = tsg_cfg.bin_size
-    sx, sy, sz = tsg_cfg.init_slice
-
-    def _shrink_for_min(total, slices, min_size):
-        while slices > 1 and total // slices < min_size:
-            slices -= 1
-        return max(1, slices)
-
-    sx = _shrink_for_min(bx, sx, tsg_cfg.min_item_mm)
-    sy = _shrink_for_min(by, sy, tsg_cfg.min_item_mm)
-    sz = _shrink_for_min(bz, sz, tsg_cfg.min_item_mm)
-
-    gen = TrainsetGenerator(
-        bin_size=[bx, by, bz],
-        init_slice=[sx, sy, sz],
-        margin_x=(0 if tsg_cfg.ensure_theoretical_100_su else tsg_cfg.margin_x),
-        margin_y=(0 if tsg_cfg.ensure_theoretical_100_su else tsg_cfg.margin_y),
-    )
-    dict_items = gen.generate_trainset(num_merge=0, num_split=0)
-
-    dict_items = [it for it in dict_items if min(it["width"], it["height"], it["depth"]) >= tsg_cfg.min_item_mm]
-
-    if not dict_items:
-        gen = TrainsetGenerator(
-            bin_size=[bx, by, bz],
-            init_slice=[1, 1, max(1, sz)],
-            margin_x=0, margin_y=0,
-        )
-        dict_items = gen.generate_trainset(num_merge=0, num_split=0)
-
-    items: list[Item] = []
-    for i, d in enumerate(dict_items):
-        d = d.copy()
-        d.setdefault("priority", 7)
-        d.setdefault("updown", False)
-        d.setdefault("options", {"color": "#14ba5e"})
-        d.setdefault("weight", 0)
-        d.setdefault("loadbear", 0)
-        d.setdefault("unit", "mm")
-        d.setdefault("b_position", d.get("b_position", [-1, -1, -1]))
-        d["name"] = d.get("name", f"tsg_{i}")
-        d["partno"] = d.get("partno", str(i))
-        d["objshape"] = "cube"
-        d["rotation_quat"] = RotationType.RT_WHD if not isinstance(d.get("rotation_quat", 0), list) else d["rotation_quat"]
-        items.append(Item(**d))
-    return items
-
+# (옛 _generate_synthetic_items 헬퍼는 SyntheticSource로 흡수됨 — 2026-05-04 DataSource 추상화)
 # ─────────────────────────────────────────────────────────────
 # Gym Env
 # ─────────────────────────────────────────────────────────────
@@ -212,71 +151,76 @@ class PalletFitEnv(gym.Env):
         self._plan_in_use = plan_dict           # 현재 에피소드 info에 노출할 '사용 중 플랜'도 같이 갱신
 
     def _as_plan_dict(self, plan: Any) -> Dict[str, Any]:
-        """
-        dict 또는 EnvPlan → 통일된 dict 형식으로 변환
+        """dict 또는 EnvPlan → 통일된 dict 형식으로 변환.
+
+        새 형식 (2026-05-04, DataSource 추상화):
+            {
+                "source":      {"mode": "...", "args": {...}},   # ← 박스 source 명세
+                "bin":         "experiment_RL",                  # ← bin alias (None이면 source.bin_alias_hint)
+                "bin_payload": {margin_x, margin_y, preview_cnt, max_steps_per_episode},
+                "tag":         "train" | "eval_*",                # logging/GIF 캡처
+                "seed":        episode seed,
+            }
         """
         default = {
-            "item_mode": "offline",
-            "item_payload": {'offline_path':"planning/data/Item_data/exhibition/real_object_0331.json"},
+            "source": {
+                "mode": "recorded",
+                "args": {"paths": ["planning/data/Item_data/exhibition/real_object_0331.json"]},
+            },
             "bin": "experiment_RL",
             "bin_payload": {},
+            "tag": "train",
+            "seed": self._seed,
         }
 
         if plan is None:
             return dict(default)
 
-        if isinstance(plan, dict):
-            item_mode = plan.get("item_mode",
-                                 plan.get("item_load_mode",
-                                          plan.get("mode", "offline")))
-
-            item_payload = dict(plan.get("item_payload",
-                                         plan.get("payload", {})) or {})
-
-            bin_key = plan.get("bin",
-                               plan.get("bin_alias", "experiment_RL"))
-
-            bin_payload = dict(plan.get("bin_payload", {}) or {})
-
-            alias_map = [
-                ("bin_margin_x", "margin_x"),
-                ("bin_margin_y", "margin_y"),
-                ("preview_cnt", "preview_cnt"),
-            ]
-            for src, dst in alias_map:
-                if src in plan and dst not in bin_payload:
-                    bin_payload[dst] = plan[src]
-
-            return {
-                "item_mode": str(item_mode),
-                "item_payload": item_payload,
-                "bin": str(bin_key),
-                "bin_payload": bin_payload,
-            }
-
-        # dataclass
+        # dataclass → dict
         if is_dataclass(plan):
             from dataclasses import asdict
-            return self._as_plan_dict(asdict(plan))
+            plan = asdict(plan)
 
-        return dict(default)
+        if not isinstance(plan, dict):
+            return dict(default)
+
+        out = dict(default)
+        if "source" in plan:
+            out["source"] = dict(plan["source"])
+        out["bin"] = str(plan.get("bin", plan.get("bin_alias", out["bin"])))
+        out["tag"] = str(plan.get("tag", plan.get("mode", out["tag"])))
+        out["seed"] = int(plan.get("seed", out["seed"]))
+
+        # bin_payload merge (top-level alias 흡수)
+        bin_payload = dict(plan.get("bin_payload", {}) or {})
+        for src, dst in (("bin_margin_x", "margin_x"),
+                         ("bin_margin_y", "margin_y"),
+                         ("preview_cnt", "preview_cnt"),
+                         ("max_steps_per_episode", "max_steps_per_episode")):
+            if src in plan and dst not in bin_payload:
+                bin_payload[dst] = plan[src]
+        out["bin_payload"] = bin_payload
+        return out
 
 
     # ── info 빌더 ────────────────────────────────────
     
     
     def _build_info(self, *, terminal_reason: Optional[str] = None) -> Dict[str, Any]:
-        mode = self._plan_in_use.get("item_mode", "offline")
-        ep_name = f"{mode}_ep{self._episode_idx}"
-        
+        # source 정보 (DataSource 추상화 — info에 mode/id 노출, agent의 history가 이걸로 record)
+        src = getattr(self, "_current_source", None)
+        source_mode = src.mode if src is not None else "unknown"
+        source_id   = src.source_id() if src is not None else "unknown"
+        ep_name = f"{source_mode}_ep{self._episode_idx}"
+
         preview_cnt = int(self._preview_cnt)
-        
         SU_now = float(self.get_SU())
         packed_count = int(self._bin.size) if self._bin else 0
 
         info = {
             "episode_path": ep_name,
-            "item_mode": mode,             
+            "source_mode": source_mode,
+            "source_id":   source_id,
             "return": float(self._ep_return),
             "SU": SU_now,
             "packed_count": packed_count,
@@ -385,9 +329,8 @@ class PalletFitEnv(gym.Env):
             plan = self._as_plan_dict(None)
             self._plan_in_use = plan
 
-        # 평가 태그(eval/eval_offline/eval_online/eval_tsg) + 0번 워커 + 새 plan 소비일 때만 GIF 캡처
-        item_payload = plan.get("item_payload", {}) or {}
-        tag = str(item_payload.get("tag", ""))
+        # 평가 태그(eval_*) + 0번 워커 + 새 plan 소비일 때만 GIF 캡처
+        tag = str(plan.get("tag", ""))
         if (
             self._is_render_env
             and consumed_pending
@@ -627,63 +570,80 @@ class PalletFitEnv(gym.Env):
     # ── 내부 유틸 ─────────────────────────────────────
 
     def _build_items_from_plan(self, plan) -> bool:
+        """plan["source"] spec → DataSource → sample(seed) 한 줄로 박스 생성.
+
+        DataSource 추상화 (2026-05-04, docs/4 Sec 2-2 해결):
+        이전 3-way 분기(synthetic/recorded/type_sampled)가 하나의 호출로 통합됨.
+        새 source 추가 시 data_sources.py에 클래스 1개 등록만 하면 됨.
+        """
         if self.packer is None:
             return False
 
-        item_payload = plan.get("item_payload", {}) or {}
+        spec = plan.get("source") or {}
+        seed = int(plan.get("seed", self._seed))
+        self._seed = seed
 
-        # 에피소드 시드 설정
-        self._seed = int(item_payload.get("episode_seed", self._seed))
-        
-        # 모드 확인
-        item_mode = plan.get("item_mode", "offline")
+        # 안전망 (docs/4 Sec 2-6 해결, 2026-05-05): synthetic source는 plan["bin"]을
+        # 자동 주입해 bin_size를 BIN_SPECS와 동기화. 사용자가 spec에 bin_size/bin_alias를
+        # 명시했으면 그게 우선 (override).
+        if spec.get("mode") == "synthetic":
+            args = dict(spec.get("args", {}))
+            if "bin_size" not in args and "bin_alias" not in args:
+                bin_alias = plan.get("bin")
+                if bin_alias:
+                    args["bin_alias"] = bin_alias
+                    spec = {**spec, "args": args}
 
         try:
-            # 1. 아이템 생성 또는 로드
-            if item_mode == "tsg":
-                tsg_cfg_dict = item_payload.get("tsg_cfg", {})
-                tsg_cfg = TSGConfig(**tsg_cfg_dict)
-                items = _generate_items_with_tsg(tsg_cfg)
-                self.packer.items_list = items
-                
-            elif item_mode == "offline":
-                paths = item_payload.get("offline_item_paths") or []
-                path0 = random.choice(paths) if len(paths) > 0 else None
-                if not path0:
-                    return False
-                self.packer.offline_item_path = path0
-                self.packer._load_offline_data()    # 내부에서 self.packer.items_list 채움
-                
-            elif item_mode == "online_type":
-                paths = item_payload.get("online_item_type_path") or []
-                path0 = random.choice(paths) if len(paths) > 0 else None
-                if not path0:
-                    return False
-                self.packer.online_item_type_path = path0
-                self.packer._load_online_item_type_data()   # 내부에서 self.packer.items_list 채움
+            # 단일 호출: spec → DataSource → 박스 dict 리스트
+            self._current_source = make_source(spec)
+            item_dicts = self._current_source.sample(seed)
+            if not item_dicts:
+                self.packer.items_list = []
+                self.queue = deque()
+                return False
 
-            # 3. Queue에는 아이템 객체나 인덱스가 아닌 'ID'만 저장
-            self.queue = deque([it._id for it in self.packer.items_list])
+            # dict → Item 객체로 변환 (필요한 default 채움)
+            items: list[Item] = []
+            for d in item_dicts:
+                d = dict(d)
+                d.setdefault("priority", 7)
+                d.setdefault("updown", False)
+                d.setdefault("options", {"color": "#14ba5e"})
+                d.setdefault("weight", 0)
+                d.setdefault("loadbear", 0)
+                d.setdefault("unit", "mm")
+                # rotation_quat이 list가 아니면 기본 회전으로 보정
+                if not isinstance(d.get("rotation_quat"), list):
+                    d["rotation_quat"] = list(RotationType.RT_WHD)
+                items.append(Item(**d))
 
+            self.packer.items_list = items
+            self.queue = deque([it._id for it in items])
             return len(self.queue) > 0
 
         except Exception as e:
             print(f"[WARN] _build_items_from_plan failed: {e}")
             self.packer.items_list = []
             self.queue = deque()
+            self._current_source = None
             return False
 
 
     def _build_binPacker_from_plan(self, plan) -> Packer:
         packer = Packer(rotation_type=RotationType.BasicRotation, order_setting=False)
 
-        item_mode = plan.get("item_mode", "offline")
-        if item_mode == "offline":
-            bin_alias = "experiment_RL"
-        elif item_mode == "online_type":
-            bin_alias = "default2"
-        else:
-            bin_alias = plan.get("bin", "experiment_RL")
+        # bin alias 우선순위: plan["bin"] > source.bin_alias_hint() > "experiment_RL"
+        bin_alias = plan.get("bin")
+        if not bin_alias:
+            spec = plan.get("source")
+            if spec:
+                try:
+                    hint = make_source(spec).bin_alias_hint()
+                except Exception:
+                    hint = None
+                bin_alias = hint
+        bin_alias = bin_alias or "experiment_RL"
 
         bin_payload = plan.get("bin_payload", {}) or {}
         self.max_steps_per_episode = int(bin_payload.get("max_steps_per_episode", 100))
@@ -733,12 +693,12 @@ if __name__ == "__main__":
     parser.add_argument("--max-steps", type=int, default=100, help="에피소드당 step 상한")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--preview-cnt", type=int, default=3)
-    parser.add_argument("--mode", choices=["tsg", "offline", "online_type"], default="tsg",
+    parser.add_argument("--mode", choices=["synthetic", "recorded", "type_sampled"], default="synthetic",
                         help="아이템 소스")
-    parser.add_argument("--offline-path", type=str, default=None,
-                        help="--mode offline일 때 사용할 json 경로")
-    parser.add_argument("--online-path", type=str, default=None,
-                        help="--mode online_type일 때 사용할 json 경로")
+    parser.add_argument("--recorded-path", type=str, default=None,
+                        help="--mode recorded일 때 사용할 json 경로")
+    parser.add_argument("--type-sampled-path", type=str, default=None,
+                        help="--mode type_sampled일 때 사용할 json 경로")
     parser.add_argument("--gif", action="store_true",
                         help="에피소드별 GIF 저장 (eval tag로 0번 워커 처럼 동작)")
     parser.add_argument("--out-dir", type=str, default="planning/RL/PalletFit_RL/_debug_run",
@@ -759,38 +719,33 @@ if __name__ == "__main__":
     def _make_plan(ep_idx: int) -> Dict[str, Any]:
         ep_seed = int(args.seed + ep_idx * 1000)
         tag_prefix = "eval" if args.gif else "debug"
-        if args.mode == "tsg":
-            payload = {
-                "tsg_cfg": {
-                    "init_slice": (4, 4, 2),
-                    "min_item_mm": 100,
+        # DataSource spec 만들기 (data_sources.spec_* 헬퍼와 동일 형식)
+        if args.mode == "synthetic":
+            spec = {
+                "mode": "synthetic",
+                "args": {
                     "bin_size": (1000, 1000, 1000),
+                    "max_items": 30,
+                    "min_item_mm": 100,
+                    "max_aspect_ratio": 3.0,
                 },
-                "episode_seed": ep_seed,
-                "tag": f"{tag_prefix}_tsg",
             }
-        elif args.mode == "offline":
-            paths = [args.offline_path] if args.offline_path else []
-            payload = {
-                "offline_item_paths": paths,
-                "episode_seed": ep_seed,
-                "tag": f"{tag_prefix}_offline",
-            }
-        else:  # online_type
-            paths = [args.online_path] if args.online_path else []
-            payload = {
-                "online_item_type_path": paths,
-                "episode_seed": ep_seed,
-                "tag": f"{tag_prefix}_online",
-            }
+        elif args.mode == "recorded":
+            paths = [args.recorded_path] if args.recorded_path else []
+            spec = {"mode": "recorded", "args": {"paths": paths}}
+        else:  # type_sampled
+            paths = [args.type_sampled_path] if args.type_sampled_path else []
+            spec = {"mode": "type_sampled", "args": {"paths": paths, "n_items": 30}}
+
         return {
-            "item_mode": args.mode,
-            "item_payload": payload,
+            "source": spec,
             "bin": args.bin_alias,
             "bin_payload": {
                 "preview_cnt": int(args.preview_cnt),
                 "max_steps_per_episode": int(args.max_steps),
             },
+            "tag": f"{tag_prefix}_{args.mode}",
+            "seed": ep_seed,
         }
 
     print(f"[debug] PalletFitEnv runner | episodes={args.episodes} mode={args.mode} "

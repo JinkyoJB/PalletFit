@@ -1,12 +1,11 @@
 # planning/RL/PalletFit_RL/agent.py
 from __future__ import annotations
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, field
 from typing import Optional, Dict, List, Callable, Any
 import os, datetime, shutil, csv
 from pathlib import Path
 import numpy as np
 import torch as th
-import datetime 
 
 try:
     # 확률 합이 0.9999999 등이 나와도 에러내지 않도록 설정
@@ -32,6 +31,9 @@ from sb3_contrib.common.maskable.utils import get_action_masks
 from planning.RL.PalletFit_RL.env import PalletFitEnv
 from planning.RL.PalletFit_RL.custom_value_policy import PointerPolicyFT, CustomCombinedExtractor
 from planning.RL.PalletFit_RL.config import ACTION_MAX_CANDIDATES, PREVIEW_MAX
+from planning.data.data_sources import (
+    spec_recorded, spec_type_sampled, spec_synthetic,
+)
 # =============================================================================
 # 0) 설정
 # =============================================================================
@@ -41,49 +43,132 @@ OVERFIT_TARGET_PATH = "planning/data/Item_data/paper/testset/dataset_episode_012
 
 
 @dataclass
+class EvalPolicy:
+    """평가용 plan_maker 정책.
+
+    train과 다른 분포에서 SU를 측정하면 학습 곡선 해석이 어려움
+    EvalPolicy의 default는 **train mid phase와 같은 분포**로 설정 → train/eval SU 직접 비교 가능.
+
+    deterministic 옵션(margin/preview/seed_offset)으로 재현성도 보장.
+
+    Examples:
+        # 기본 (train mid 분포 + deterministic)
+        cfg = AgentConfig()
+
+        # eval에서도 type_sampled/synthetic 비율 다르게
+        cfg = AgentConfig(eval=EvalPolicy(p_type_sampled=0.5, p_synthetic=0.5))
+
+        # eval만 다양한 margin으로 평가
+        cfg = AgentConfig(eval=EvalPolicy(margin_x=4, margin_y=4))
+
+        # eval만 큰 박스 (curriculum)
+        cfg = AgentConfig(eval=EvalPolicy(synthetic_cfg=dict(min_item_mm=200, max_items=15)))
+    """
+    # 1) source 분포 (default = train mid phase와 동일) — Sec 2-8 핵심
+    # 2026-05-05: 학습 분포 70/30 변경에 맞춰 평가 분포도 동일 적용
+    p_scenario_fixed: float = 0.5
+    p_type_sampled:   float = 0.7   # was 1.0
+    p_synthetic:      float = 0.3   # was 0.0
+    rehearsal_p:      float = 0.0   # eval은 rehearsal 안 함 (재현성)
+
+    # 2) deterministic 옵션 — 매 평가마다 같은 plan을 보장
+    margin_x: int = 0
+    margin_y: int = 0
+    preview_cnt: Optional[int] = None       # None이면 max(cfg.preview_cnt_choices)
+    bin_alias: str = "experiment_RL"
+
+    # 3) eval 전용 데이터 (None이면 cfg fallback)
+    recorded_pool: Optional[List[str]] = None       # None → cfg.eval_recorded_paths_pool
+    type_sampled_paths: Optional[List[str]] = None  # None → TYPE_SAMPLED_PATHS
+
+    # 4) seed 분리 (학습 시드와 충돌 방지, 옛 hardcoded 100_000)
+    seed_offset: int = 100_000
+
+
+@dataclass
+class BootstrapPolicy:
+    """Bootstrap phase에서 강제하는 옵션들의 명시적 정책.
+
+    학습 초기에 단순한 시나리오로 overfit시켜 의미 있는 행동을 빠르게 배우게 하는 단계.
+    활성화되면 cfg의 일부 옵션(`type_sampled_ratio`, `synthetic_ratio`, `preview_cnt_choices`,
+    `recorded_paths_pool` 등)이 silently 무시됨 → 어떤 게 강제되는지 한 곳에서 명시.
+
+    기본값은 옛 동작과 동일 (학습 동작 무변화).
+
+    Examples:
+        # bootstrap 완전 끄기
+        cfg = AgentConfig(bootstrap=BootstrapPolicy(enabled=False))
+        # 다른 OVERFIT 파일
+        cfg = AgentConfig(bootstrap=BootstrapPolicy(fixed_recorded_path="my.json"))
+        # bootstrap에서도 type_sampled 허용
+        cfg = AgentConfig(bootstrap=BootstrapPolicy(force_recorded_only=False))
+    """
+    enabled: bool = True
+    duration_ratio: float = 0.10                                    # 전체 timesteps 대비 bootstrap 비율 (옛 bootstrap_ratio)
+    fixed_recorded_path: Optional[str] = OVERFIT_TARGET_PATH        # 1개 파일로 고정 (None이면 정상 풀)
+    fixed_preview_cnt: Optional[int] = None                         # None이면 PREVIEW_MAX 사용
+    fixed_rollout_seed: bool = True                                 # rollout_idx=0 고정 (문제 순서 동일)
+    force_recorded_only: bool = True                                # type_sampled/synthetic 비율을 0으로
+
+
+@dataclass
 class AgentConfig:
     device: str = "cuda" if th.cuda.is_available() else "cpu"
     seed: int = 1456
     total_timesteps: int = 20_000_000
 
-    # PPO 핵심
+    # ── PPO 핵심 ─────────────────────────────────────────────────
+    # 2026-05-05: sparse reward(terminal_su) 적응 + 자원 활용 패키지 (Sec ?? 참조)
+    # 하드웨어: Intel Xeon Gold 6526Y 16C16T (HT off), A6000 48GB, 125GiB RAM
     gamma: float = 0.999
-    n_steps: int = 128         # rollout steps per env
-    batch_size: int = 256
+    gae_lambda: float = 0.97             # ★ NEW: sparse reward → long-horizon credit 전파 (default 0.95에서 ↑)
+    n_steps: int = 2048                  # was 1024 — n_envs 16으로 줄였으니 rollout 32k 유지
+    batch_size: int = 8192               # was 4096 — A6000 추가 활용 (minibatches 8 → 4)
+    n_epochs: int = 10                   # ★ NEW (cfg 노출, default SB3 동일)
 
-    ent_coef: float = 0.03
-    vf_coef: float = 0.5
-    clip_range: float = 0.3 
+    ent_coef: float = 0.05               # was 0.03 — sparse reward에서 exploration 보강
+    vf_coef: float = 0.7                 # was 0.5  — terminal_su 큰 한 방 → critic 학습 비중 ↑
+    clip_range: float = 0.2              # was 0.3  — sparse reward의 advantage variance 대응
     learning_rate: float = 3e-4
 
-    # 벡터 환경
-    n_envs_train: int = 24
-    n_envs_eval: int = 5
+    # ── 벡터 환경 ────────────────────────────────────────────────
+    # Option P: physical core 수와 정렬 (oversubscription 제거 → context-switch 비용 ↓)
+    n_envs_train: int = 16               # was 32 — 16 physical cores와 1:1 매핑
+    n_envs_eval: int = 8                 # was 5  — eval 통계 표본 ↑ (학습 시 16 + 평가 시 8 = 24 procs)
+    # rollout = n_envs_train × n_steps = 16 × 2048 = 32,768 transitions per update
+    # minibatches = 32768 / 8192 = 4
 
-    # 주기(롤아웃 단위) 저장/평가
-    eval_every_rollouts: int = 12
-    save_every_rollouts: int = 12
+    # ── 주기(롤아웃 단위) 저장/평가 ────────────────────────────────
+    # rollout이 32k로 커졌으니 같은 timesteps 도달까지 rollout 수가 1/10 → 주기 단축
+    eval_every_rollouts: int = 2         # was 12 → 2 × 32768 = ~65k step마다 평가 (이전과 동일 빈도)
+    save_every_rollouts: int = 6         # was 12 → 6 × 32768 = ~196k step마다 저장
 
     # ── 데이터 스케줄링 옵션 ─────────────────────────────────────
-    # 1) 시간(샘플수) 기반 경계: total_timesteps 대비 비율
-    bootstrap_ratio: float = 0.10   
-    mid_ratio: float       = 0.60
+    # 1) Bootstrap phase 정책 — Sec 2-5 해결, BootstrapPolicy로 명시
+    bootstrap: BootstrapPolicy = field(default_factory=BootstrapPolicy)
+    # 1-b) Mid 페이즈 종료 비율 (mid 이후는 late)
+    mid_ratio: float = 0.60
+    # 1-c) Eval 정책 — Sec 2-8 해결, EvalPolicy로 명시 (default=train mid 분포)
+    eval: EvalPolicy = field(default_factory=EvalPolicy)
 
-    # 2) 리허설(offline 고정 시나리오 유지학습) 비율: 페이즈별
+    # 2) 리허설(recorded 고정 시나리오 유지학습) 비율: 페이즈별
     rehearsal_p_boot: float = 0.10
     rehearsal_p_mid:  float = 0.15
     rehearsal_p_late: float = 0.20
-    # 3) 랜덤형 내부 비율
-    online_type_ratio: float = 1.0   # online_type : tsg = 0.7 : 0.3
-    tsg_ratio:         float = 0.0
+    # 3) 랜덤형 내부 비율 (2026-05-05: 70/30으로 조정)
+    # - type_sampled 70%: real-world (real_box.json) 박스 분포 학습 (main)
+    # - synthetic 30%: terminal_su=1.0 도달 가능 시나리오 → critic이 "최대치" V(s) 학습 (보조)
+    # 실효 비율 (recorded 50% 가정): recorded 50% / type_sampled 35% / synthetic 15%
+    type_sampled_ratio: float = 0.7   # was 1.0
+    synthetic_ratio:    float = 0.3   # was 0.0
 
-    # # 오프라인 리허설(offline) 완전 차단
+    # # recorded 리허설 완전 차단
     # rehearsal_p_boot=0.0
     # rehearsal_p_mid=0.0
     # rehearsal_p_late=0.0
-    # # online_type:tsg 비율을 0:1로
-    # online_type_ratio=0.0
-    # tsg_ratio=1.0
+    # # type_sampled:synthetic 비율을 0:1로
+    # type_sampled_ratio=0.0
+    # synthetic_ratio=1.0
 
     # 4) 성능 기반(Adaptive)도 켜고 싶을 때
     use_adaptive_phase: bool = False      # True면 성능기반 상향 허용(하이브리드)
@@ -95,21 +180,21 @@ class AgentConfig:
 
     # ── 오프라인 소스 선택용 옵션 ──────────────────────────────
     # 사용자가 직접 경로 풀을 지정할 수 있게 (폴더/파일 혼합 가능)
-    # offline_item_paths_pool: Optional[List[str]] = None
-    offline_item_paths_pool=[
+    # recorded_paths_pool: Optional[List[str]] = None
+    recorded_paths_pool=[
             "planning/data/Item_data/paper/setting123_discrete",
             "planning/data/Item_data/paper_drl/rs",
             'planning/data/Item_data/paper/testset'
         ]
     # [선택] 각 경로에 대한 가중치. None이면 자동으로 폴더 내 JSON 개수 비례로 계산
-    # offline_item_paths_weights: Optional[List[float]] = None
-    offline_item_paths_weights=[0.3, 0.3, 0.4]
+    # recorded_paths_weights: Optional[List[float]] = None
+    recorded_paths_weights=[0.3, 0.3, 0.4]
 
     # 자동 가중치 계산을 켤지 여부 (weights가 None일 때만 의미 있음)
-    offline_auto_weight_by_len: bool = True
+    recorded_auto_weight_by_len: bool = True
     # 평가용 오프라인 소스 (None이면 기본값 사용)
-    # eval_item_paths_pool: Optional[List[str]] = None
-    eval_item_paths_pool=[
+    # eval_recorded_paths_pool: Optional[List[str]] = None
+    eval_recorded_paths_pool=[
             OVERFIT_TARGET_PATH,
             'planning/data/Item_data/paper/testset/dataset_episode_653.json',
             'planning/data/Item_data/paper/testset/dataset_episode_2731.json',
@@ -119,27 +204,55 @@ class AgentConfig:
     # ── 액션 후보/선택 개수 튜닝 ────────────────────────────────
     preview_cnt_choices:     List[int] = field(default_factory=lambda: [1,2,3,4,5])
 
+
+# =============================================================================
+# Lite preset — 저사양 HW 재현 보호장치 (논문 reproducibility)
+# =============================================================================
+def make_lite_config() -> AgentConfig:
+    """저사양 HW(4C/8T CPU + 6GB GPU + 16GB RAM)용 preset.
+
+    학습 dynamics는 기본 cfg와 동일 — rollout 크기와 total_timesteps 보존.
+    한 번에 처리하는 병렬도/배치만 줄여서 약한 머신에서 OOM 없이 돌게 함.
+    수렴 속도(샘플 효율)는 동일, wall-clock만 더 걸림.
+
+    사용:
+        cfg = make_lite_config() if args.preset == "lite" else AgentConfig()
+        agent = MaskablePPOAgent(cfg=cfg)
+    """
+    cfg = AgentConfig()
+    cfg.n_envs_train = 4         # was 16  — 4 cores 가정
+    cfg.n_envs_eval  = 2         # was 8
+    cfg.n_steps      = 8192      # was 2048 — rollout = 4 × 8192 = 32,768 동일 유지
+    cfg.batch_size   = 2048      # was 8192 — 6GB VRAM 안전 여유 (minibatches = 16)
+    return cfg
+
 # =============================================================================
 # 1) Trainset Plan & Plan maker
 # =============================================================================
 @dataclass
 class EnvPlan:
+    """env에 전달되는 episode 계획.
+
+    DataSource 추상화 (2026-05-04, docs/4 Sec 2-2 해결):
+    이전엔 `item_mode`/`item_payload`로 mode별 분기를 표현했지만, 이제는 단일 `source`
+    spec dict({"mode": ..., "args": ...})로 일원화. env는 spec → make_source().sample()
+    한 줄로 처리.
+    """
     # 에피소드 재현용 시드 (episode_seed로 들어감)
     seed: int
 
     # env 레벨 설정
     max_steps_per_episode: int = 200
-    
-    # [수정] 기존 두 변수 삭제 -> preview_cnt로 통합
-    # 기본값은 config의 PREVIEW_MAX (5)로 설정
-    preview_cnt: int = PREVIEW_MAX  
+    preview_cnt: int = PREVIEW_MAX
 
     # 메타
     mode: str = "train"         # "train" | "eval" (태그용)
 
-    # 아이템 로딩 쪽
-    item_mode: str = "offline"  # "offline" | "online_type" | "tsg"
-    item_payload: Dict[str, Any] = field(default_factory=dict)
+    # 박스 source — DataSource spec dict
+    # 예: {"mode": "synthetic", "args": {"max_items": 30, ...}}
+    source: Dict[str, Any] = field(
+        default_factory=lambda: {"mode": "recorded", "args": {"paths": []}}
+    )
 
     # bin 쪽
     bin_alias: str = "experiment_RL"   # BinSpecsDict 키
@@ -148,48 +261,56 @@ class EnvPlan:
     bin_payload: Dict[str, Any] = field(default_factory=dict)
 
 # 공통 경로(프로젝트 상황에 맞게 수정)
-OFFLINE_PATHS = [
+RECORDED_PATHS = [
     "planning/data/Item_data/exhibition",
     "planning/data/Item_data/paper/setting123_discrete",
 ]
-ONLINE_TYPE_PATHS = [
+TYPE_SAMPLED_PATHS = [
 "planning/data/Item_data/paper/real_box/real_box.json"
 ]
-DEFAULT_TSG_CFG = dict(init_slice=(4, 4, 2), min_item_mm=100)
+DEFAULT_SYNTHETIC_CFG = dict(
+    bin_size=(1000, 1000, 1000),
+    max_items=30,
+    min_item_mm=100,
+    max_aspect_ratio=3.0,
+    margin_x=0,
+    margin_y=0,
+)
 
 def env_plan_to_payload(p: EnvPlan) -> Dict[str, Any]:
-    # 1) item_payload 복사 + 보정
-    item_payload = dict(p.item_payload or {})
+    """EnvPlan → env.apply_plan에 전달할 dict.
 
-    # seed → episode_seed로 보강 (없으면)
-    if "episode_seed" not in item_payload:
-        item_payload["episode_seed"] = int(p.seed)
-
-    # train/eval 모드 → tag로 보강 (없으면)
-    if "tag" not in item_payload:
-        item_payload["tag"] = p.mode
-
-    # 2) bin_payload 구성 (EnvPlan 필드 + 사용자 payload 병합)
+    새 canonical 형식(2026-05-04, DataSource 추상화):
+        {
+            "source":      {"mode": ..., "args": {...}},
+            "bin":         alias,
+            "bin_payload": {margin_x, margin_y, preview_cnt, max_steps_per_episode},
+            "tag":         "train" | "eval_*",
+            "seed":        episode seed,
+        }
+    """
     bin_payload = dict(p.bin_payload or {})
     bin_payload.setdefault("max_steps_per_episode", int(p.max_steps_per_episode))
     bin_payload.setdefault("margin_x", int(p.bin_margin_x))
     bin_payload.setdefault("margin_y", int(p.bin_margin_y))
-    
-    # [수정] 통합된 preview_cnt를 payload에 담습니다.
     bin_payload.setdefault("preview_cnt", int(p.preview_cnt))
 
-    # 3) env가 기대하는 canonical dict로 변환
     return {
-        "item_mode": p.item_mode,
-        "item_payload": item_payload,
-        "bin": p.bin_alias,
+        "source":      dict(p.source or {}),
+        "bin":         p.bin_alias,
         "bin_payload": bin_payload,
+        "tag":         str(p.mode),
+        "seed":        int(p.seed),
     }
 
 def _phase_from_steps(current_steps: int, total_timesteps: int,
-                      bootstrap_ratio: float, mid_ratio: float) -> str:
-    """시간(샘플) 기반 페이즈 판정"""
-    b = int(total_timesteps * bootstrap_ratio)
+                      bootstrap_duration_ratio: float, mid_ratio: float) -> str:
+    """시간(샘플) 기반 페이즈 판정.
+
+    bootstrap_duration_ratio: 전체 timesteps 대비 bootstrap 차지 비율
+        (BootstrapPolicy.duration_ratio에서 옴).
+    """
+    b = int(total_timesteps * bootstrap_duration_ratio)
     m = int(total_timesteps * mid_ratio)
     if current_steps < b:
         return "bootstrap"  # 70:30
@@ -230,23 +351,23 @@ def _normalize_probs(xs: List[float]) -> List[float]:
         return [1.0 / n] * n if n > 0 else []
     return [max(0.0, x) / s for x in xs]
 
-def _resolve_offline_pool_and_weights(cfg: AgentConfig) -> tuple[List[str], Optional[List[float]]]:
+def _resolve_recorded_pool_and_weights(cfg: AgentConfig) -> tuple[List[str], Optional[List[float]]]:
     """
-    cfg에서 오프라인 풀/가중치를 가져오되, 없으면 기본 OFFLINE_PATHS 사용.
-    가중치가 없고 offline_auto_weight_by_len=True면 폴더 내 json 개수로 가중치 자동 계산.
+    cfg에서 오프라인 풀/가중치를 가져오되, 없으면 기본 RECORDED_PATHS 사용.
+    가중치가 없고 recorded_auto_weight_by_len=True면 폴더 내 json 개수로 가중치 자동 계산.
     """
-    pool = list(cfg.offline_item_paths_pool) if cfg.offline_item_paths_pool else list(OFFLINE_PATHS)
+    pool = list(cfg.recorded_paths_pool) if cfg.recorded_paths_pool else list(RECORDED_PATHS)
     if not pool:
-        raise ValueError("No offline_item_paths available")
+        raise ValueError("No recorded_paths available")
 
-    if cfg.offline_item_paths_weights is not None:
+    if cfg.recorded_paths_weights is not None:
         # 사용자가 명시한 가중치
-        weights = list(cfg.offline_item_paths_weights)
+        weights = list(cfg.recorded_paths_weights)
         if len(weights) != len(pool):
-            raise ValueError("offline_item_paths_weights length must match offline_item_paths_pool")
+            raise ValueError("recorded_paths_weights length must match recorded_paths_pool")
         return pool, weights
 
-    if cfg.offline_auto_weight_by_len:
+    if cfg.recorded_auto_weight_by_len:
         counts = [max(1, _count_json_episodes(p)) for p in pool]  # 최소 1 보장
         return pool, counts
 
@@ -262,7 +383,7 @@ def _list_json_files(path: str) -> List[str]:
         return [str(p)]
     return []
 
-def _expand_offline_pool_to_files(pool: List[str]) -> List[str]:
+def _expand_recorded_pool_to_files(pool: List[str]) -> List[str]:
     files: List[str] = []
     for p in pool:
         files.extend(_list_json_files(p))
@@ -271,7 +392,7 @@ def _expand_offline_pool_to_files(pool: List[str]) -> List[str]:
 
 # ---------- (B) 폴더 가중치를 파일 가중치로 풀어주기 ----------
 def _distribute_folder_weights_to_files(pool: List[str], folder_weights: Optional[List[float]]) -> Optional[List[float]]:
-    files = _expand_offline_pool_to_files(pool)
+    files = _expand_recorded_pool_to_files(pool)
     if not files:
         return []
 
@@ -293,46 +414,83 @@ def _distribute_folder_weights_to_files(pool: List[str], folder_weights: Optiona
         file_weights.append(fw / cnt)
     return file_weights
 
-# ---------- (C) 히스토리 기반: '안 배운 파일' 우선 선택 ----------
-def _choose_offline_file_with_history(files: List[str], file_weights: Optional[List[float]], history: "DatasetHistory") -> Optional[str]:
-    if not files:
-        return None
-    # 아직 한 번도 안 배운 파일들
-    unseen = [f for f in files if history.offline.get(f, SourceStat()).count == 0]
-    if unseen:
-        # 안 배운 것들 중에서 균등(혹은 파일가중치가 있다면 그 부분집합에 맞춰 선택)
-        if file_weights is None:
-            return str(np.random.choice(unseen))
-        else:
-            # 부분집합에 대한 가중치 재정규화
-            idxs = [files.index(u) for u in unseen]
-            subw = _normalize_probs([file_weights[i] for i in idxs])
-            return unseen[int(np.random.choice(len(unseen), p=subw))]
-    # 전부 배운 적 있으면 가중치/균등으로
+# ---------- (C) 히스토리 기반 파일 선택 ----------
+def _weighted_choice(files: List[str], file_weights: Optional[List[float]]) -> str:
+    """파일 가중 sample. weights None이면 균등."""
     if file_weights is None:
         return str(np.random.choice(files))
     probs = _normalize_probs(file_weights)
     return files[int(np.random.choice(len(files), p=probs))]
+
+
+def _choose_unseen_first(
+    files: List[str],
+    file_weights: Optional[List[float]],
+    history: "DatasetHistory",
+) -> Optional[str]:
+    """안 배운 파일 우선 선택 (탐험). 평소 학습용."""
+    if not files:
+        return None
+    # 아직 한 번도 안 배운 파일들
+    unseen = [f for f in files if history.recorded.get(f, SourceStat()).count == 0]
+    if unseen:
+        if file_weights is None:
+            return str(np.random.choice(unseen))
+        # 부분집합에 대한 가중치 재정규화
+        idxs = [files.index(u) for u in unseen]
+        subw = _normalize_probs([file_weights[i] for i in idxs])
+        return unseen[int(np.random.choice(len(unseen), p=subw))]
+    # 전부 배운 적 있으면 가중치/균등으로
+    return _weighted_choice(files, file_weights)
+
+
+def _choose_mastered_first(
+    files: List[str],
+    file_weights: Optional[List[float]],
+    history: "DatasetHistory",
+) -> Optional[str]:
+    """이미 mastered한 파일 우선 선택 (catastrophic forgetting 방지 = 진짜 rehearsal).
+
+    DatasetHistory.mastered_recorded()의 임계값(min_episodes_master / su_master_threshold)
+    기준으로 mastered 판정.
+    학습 초기엔 mastered=∅이라 fallback으로 일반 가중 sample (fixed 분기와 동일 동작).
+
+    docs/4 Sec 2-4 해결 (2026-05-04): 옛 _choose_recorded_file_with_history는 동작이 "탐험"인데
+    이름이 "복습"이라 의미 충돌. 이제 unseen-first(탐험) / mastered-first(복습) 두 함수로 분리하고
+    plan_maker에서 explore vs rehearsal 분기에 각각 적용.
+    """
+    if not files:
+        return None
+    mastered_set = set(history.mastered_recorded())
+    mastered = [f for f in files if f in mastered_set]
+    if mastered:
+        if file_weights is None:
+            return str(np.random.choice(mastered))
+        idxs = [files.index(m) for m in mastered]
+        subw = _normalize_probs([file_weights[i] for i in idxs])
+        return mastered[int(np.random.choice(len(mastered), p=subw))]
+    # 아직 mastered 없음 → 평소 가중치/균등 sample (학습 초기 fallback)
+    return _weighted_choice(files, file_weights)
 
 def _make_plans_core(
     seed: int,
     n_envs: int,
     *,
     p_scenario_fixed: float,
-    p_online_type: float,
-    p_tsg: float,          
+    p_type_sampled: float,
+    p_synthetic: float,          
     rehearsal_p: float,
     rollout_idx: int = 0,
     bin_key: str = "experiment_RL",
     margin_range: tuple[int, int] = (0, 8),
-    offline_file_candidates: Optional[List[str]] = None,
-    offline_file_weights: Optional[List[float]] = None,
+    recorded_file_candidates: Optional[List[str]] = None,
+    recorded_file_weights: Optional[List[float]] = None,
     history: Optional["DatasetHistory"] = None,
     preview_cnt_choices: Optional[List[int]] = None,
     ) -> List[EnvPlan]:
     
     plans: List[EnvPlan] = []
-    files = list(offline_file_candidates or [])
+    files = list(recorded_file_candidates or [])
 
     # [수정] 기본 후보군 설정 (없으면 PREVIEW_MAX 하나만 사용)
     pc_choices = list(preview_cnt_choices or [PREVIEW_MAX])
@@ -351,60 +509,50 @@ def _make_plans_core(
         # 3) 이 env 에피소드용 시드 (기존 동일)
         ep_seed = int(seed + rollout_idx * 10_000 + i)
 
-        # 공통 플랜 생성기
-        def _make_base_plan(item_mode: str, payload: Dict[str, Any], tag: str) -> EnvPlan:
-            pl = dict(payload)
-            pl.setdefault("episode_seed", ep_seed)
-            pl.setdefault("tag", tag)
-
+        # 공통 플랜 생성기 — DataSource spec dict + bin/margin/preview 묶기
+        def _make_plan(spec: Dict[str, Any], tag: str) -> EnvPlan:
             return EnvPlan(
                 seed=ep_seed,
                 max_steps_per_episode=200,
                 preview_cnt=p_cnt,
-                mode="train",
-                item_mode=item_mode,
-                item_payload=pl,
+                mode=tag,
+                source=spec,
                 bin_alias=bin_key,
                 bin_margin_x=mx,
                 bin_margin_y=my,
-                bin_payload={}, 
+                bin_payload={},
             )
 
-        # 4) 리허설 (offline만) - 기존 로직 유지
+        # 4) 진짜 rehearsal — mastered한 source 우선 (catastrophic forgetting 방지)
         if np.random.rand() < rehearsal_p:
-            chosen = _choose_offline_file_with_history(files, offline_file_weights, history) if history else (
-                files[int(np.random.choice(len(files)))] if files else None
-            )
-            plans.append(_make_base_plan(
-                "offline",
-                {"offline_item_paths": [chosen] if chosen else []},
+            chosen = (_choose_mastered_first(files, recorded_file_weights, history)
+                      if history else
+                      (files[int(np.random.choice(len(files)))] if files else None))
+            plans.append(_make_plan(
+                spec_recorded([chosen] if chosen else []),
                 tag="train-rehearsal",
             ))
             continue
 
-        # 5) 고정형 vs 랜덤형 - 기존 로직 유지
+        # 5) 고정형(평소 학습): 안 배운 source 우선 (탐험)
         if np.random.rand() < p_scenario_fixed:
-            # 고정 offline
-            chosen = _choose_offline_file_with_history(files, offline_file_weights, history) if history else (
-                files[int(np.random.choice(len(files)))] if files else None
-            )
-            plans.append(_make_base_plan(
-                "offline",
-                {"offline_item_paths": [chosen] if chosen else []},
+            chosen = (_choose_unseen_first(files, recorded_file_weights, history)
+                      if history else
+                      (files[int(np.random.choice(len(files)))] if files else None))
+            plans.append(_make_plan(
+                spec_recorded([chosen] if chosen else []),
                 tag="train",
             ))
         else:
-            # 랜덤형: online_type vs tsg
-            if np.random.rand() < p_online_type:
-                plans.append(_make_base_plan(
-                    "online_type",
-                    {"online_item_type_path": ONLINE_TYPE_PATHS},
+            # 랜덤형: type_sampled vs synthetic
+            if np.random.rand() < p_type_sampled:
+                plans.append(_make_plan(
+                    spec_type_sampled(TYPE_SAMPLED_PATHS),
                     tag="train",
                 ))
             else:
-                plans.append(_make_base_plan(
-                    "tsg",
-                    {"tsg_cfg": DEFAULT_TSG_CFG},
+                plans.append(_make_plan(
+                    spec_synthetic(**DEFAULT_SYNTHETIC_CFG),
                     tag="train",
                 ))
 
@@ -412,62 +560,56 @@ def _make_plans_core(
 
 def make_time_based_plan_maker(cfg: AgentConfig, history: "DatasetHistory"):
     def plan_maker(rollout_idx: int, n_envs: int, *, current_steps: int) -> List[EnvPlan]:
-        # 1. 현재 페이즈 확인
-        phase = _phase_from_steps(current_steps, cfg.total_timesteps, cfg.bootstrap_ratio, cfg.mid_ratio)
-        
+        # 1. 현재 페이즈 확인 (bootstrap.duration_ratio 사용)
+        phase = _phase_from_steps(
+            current_steps, cfg.total_timesteps,
+            cfg.bootstrap.duration_ratio, cfg.mid_ratio,
+        )
+
         p_scenario_fixed, _ = _mix_ratio_from_phase(phase)
         rehearsal_p = _rehearsal_p_from_phase(phase, cfg)
 
-        # ────────────────────────────────────────────────────────────────
-        # [수정] 통합된 옵션 설정 (preview_cnt)
-        # ────────────────────────────────────────────────────────────────
-        
-        # 기본값 (Config에서 가져옴)
-        cur_pc_choices = cfg.preview_cnt_choices
-        final_rollout_idx = rollout_idx 
+        # 정상 풀 (mid/late 또는 bootstrap.enabled=False일 때)
+        recorded_pool, folder_weights = _resolve_recorded_pool_and_weights(cfg)
+        recorded_files = _expand_recorded_pool_to_files(recorded_pool)
+        recorded_file_weights = _distribute_folder_weights_to_files(recorded_pool, folder_weights)
+        cur_pc_choices = list(cfg.preview_cnt_choices)
+        final_rollout_idx = rollout_idx
+        real_p_fixed = p_scenario_fixed
+        real_p_type_sampled = cfg.type_sampled_ratio
+        real_p_synthetic = cfg.synthetic_ratio
 
-        if phase == "bootstrap":
-            # 1) 파일 1개로 고정
-            offline_files = [OVERFIT_TARGET_PATH] 
-            offline_file_weights = None
-            
-            # 2) 섞기 비율 끄기 (무조건 이 시나리오만)
-            real_p_fixed = 1.0 
-            real_p_online = 0.0
-            real_p_tsg = 0.0
-            
-            # 3) ★ 시드 고정 (문제 순서 고정)
-            final_rollout_idx = 0  
-            
-            # 4) ★ 옵션 고정: 무조건 최대 개수(5개) 보여주기
-            #    (가장 정보가 많고 선택지가 넓은 상태에서 학습)
-            from planning.RL.PalletFit_RL.config import PREVIEW_MAX
-            cur_pc_choices = [PREVIEW_MAX]  # [5]
-            
-        else:
-            # 중반 이후: 정상적으로 전체 풀 사용 & 시드 변경
-            offline_pool, folder_weights = _resolve_offline_pool_and_weights(cfg)
-            offline_files = _expand_offline_pool_to_files(offline_pool)
-            offline_file_weights = _distribute_folder_weights_to_files(offline_pool, folder_weights)
-            
-            real_p_fixed = p_scenario_fixed
-            real_p_online = cfg.online_type_ratio
-            real_p_tsg = cfg.tsg_ratio
-            # choices는 기본값(1~5 랜덤 등) 사용
+        # 2. Bootstrap phase 강제 옵션 적용 — BootstrapPolicy 항목별 토글
+        bs = cfg.bootstrap
+        if bs.enabled and phase == "bootstrap":
+            if bs.fixed_recorded_path:
+                recorded_files = [bs.fixed_recorded_path]
+                recorded_file_weights = None
+            if bs.force_recorded_only:
+                real_p_fixed = 1.0
+                real_p_type_sampled = 0.0
+                real_p_synthetic = 0.0
+            if bs.fixed_rollout_seed:
+                final_rollout_idx = 0
+            if bs.fixed_preview_cnt is not None:
+                cur_pc_choices = [int(bs.fixed_preview_cnt)]
+            else:
+                # 기본: PREVIEW_MAX 하나로 고정 (가장 정보 많은 상태에서 학습)
+                cur_pc_choices = [PREVIEW_MAX]
 
         return _make_plans_core(
             cfg.seed,     # positional arg 1
             n_envs,       # positional arg 2
-            
+
             p_scenario_fixed=real_p_fixed,
-            p_online_type=real_p_online,
-            p_tsg=real_p_tsg,
+            p_type_sampled=real_p_type_sampled,
+            p_synthetic=real_p_synthetic,
             rehearsal_p=rehearsal_p,
             
             rollout_idx=final_rollout_idx,  
             
-            offline_file_candidates=offline_files,
-            offline_file_weights=offline_file_weights,
+            recorded_file_candidates=recorded_files,
+            recorded_file_weights=recorded_file_weights,
             history=history,
             
             # [수정] 통합된 choices 전달
@@ -475,93 +617,59 @@ def make_time_based_plan_maker(cfg: AgentConfig, history: "DatasetHistory"):
         )
     return plan_maker
 
-def make_eval_plan_maker(
-    cfg: AgentConfig,
-    *,
-    eval_offline_pool: Optional[List[str]] = None,
-    eval_offline_weights: Optional[List[float]] = None,
-    allow_online_type: bool = True,
-    allow_tsg: bool = True,
-    offline_path: str = "planning/data/Item_data/paper/setting123_discrete_eval/dataset_episode_012.json",
-    online_type_path: str = "planning/data/Item_data/exhibition/real_object2.json", 
-    tsg_cfg: Optional[Dict[str, Any]] = None,
-    bin_key: str = "experiment_RL",
-) -> Callable[[int, int], List[EnvPlan]]:
+def make_eval_plan_maker(cfg: AgentConfig) -> Callable[[int, int], List[EnvPlan]]:
+    """Eval plan_maker — `_make_plans_core` 재사용으로 train과 동일 코드 경로.
 
-    tsg_cfg_final: Dict[str, Any] = dict(tsg_cfg or DEFAULT_TSG_CFG)
+    docs/4 Sec 2-8 해결 (2026-05-05): 옛날엔 별도 200줄 직렬 loop라 train과 분포가
+    어긋났음. 이제 EvalPolicy로 정책 명시 → train과 같은 함수에 인자만 다르게.
+    """
+    ep = cfg.eval
 
-    # 1) Offline Pool 준비
-    if eval_offline_pool is not None:
-        offline_pool = list(eval_offline_pool)
-    elif cfg.offline_item_paths_pool:
-        offline_pool = list(cfg.offline_item_paths_pool)
+    # 1) recorded pool 결정 (EvalPolicy override > cfg.eval_recorded_paths_pool > cfg.recorded_paths_pool)
+    if ep.recorded_pool is not None:
+        recorded_pool = list(ep.recorded_pool)
+    elif cfg.eval_recorded_paths_pool:
+        recorded_pool = list(cfg.eval_recorded_paths_pool)
+    elif cfg.recorded_paths_pool:
+        recorded_pool = list(cfg.recorded_paths_pool)
     else:
-        offline_pool = [offline_path]
+        recorded_pool = []
+    recorded_files = _expand_recorded_pool_to_files(recorded_pool) if recorded_pool else []
 
-    offline_files = _expand_offline_pool_to_files(offline_pool) if offline_pool else []
-
-    # 2) Config: 평가용 옵션 결정 (최댓값 사용)
-    # [수정] preview_cnt_choices의 최댓값을 사용
-    if cfg.preview_cnt_choices:
+    # 2) preview_cnt 결정 (EvalPolicy override > max(cfg.preview_cnt_choices) > PREVIEW_MAX)
+    if ep.preview_cnt is not None:
+        preview_cnt_eval = int(ep.preview_cnt)
+    elif cfg.preview_cnt_choices:
         preview_cnt_eval = int(max(cfg.preview_cnt_choices))
     else:
-        from planning.RL.PalletFit_RL.config import PREVIEW_MAX
         preview_cnt_eval = int(PREVIEW_MAX)
 
     def plan_maker_eval(rollout_idx: int, n_envs: int, *, current_steps: int) -> List[EnvPlan]:
-        plans: List[EnvPlan] = []
-
-        for i in range(n_envs):
-            ep_seed = int(cfg.seed + 100_000 + rollout_idx * 10_000 + i)
-
-            # 5개 단위로 패턴 생성 (4 Offline : 1 Online)
-            is_online_turn = ((i + 1) % 5 == 0)
-
-            if is_online_turn:
-                # [Online 모드]
-                item_mode = "online_type"
-                target_path = [online_type_path] if online_type_path else ONLINE_TYPE_PATHS
-                
-                item_payload = {
-                    "online_item_type_path": target_path,
-                    "episode_seed": ep_seed,
-                    "tag": "eval_online",
-                }
-            
-            else:
-                # [Offline 모드]
-                if offline_files:
-                    item_mode = "offline"
-                    item_payload = {
-                        "offline_item_paths": list(offline_files),
-                        "episode_seed": ep_seed,
-                        "tag": "eval_offline",
-                    }
-                else:
-                    item_mode = "tsg"
-                    item_payload = {
-                        "tsg_cfg": dict(tsg_cfg_final),
-                        "episode_seed": ep_seed,
-                        "tag": "eval_tsg",
-                    }
-
-            # Plan 생성
-            plans.append(EnvPlan(
-                seed=ep_seed,
-                max_steps_per_episode=200,
-                
-                # [수정] 통합된 변수 하나만 전달
-                preview_cnt=preview_cnt_eval,
-                
-                mode="eval",
-                item_mode=item_mode,
-                item_payload=item_payload,
-                bin_alias=bin_key,
-                bin_margin_x=0,
-                bin_margin_y=0,
-                bin_payload={},
-            ))
-
+        # train의 _make_plans_core 그대로 재사용 — 동일 코드 경로!
+        # eval 차이점은 인자로만 표현:
+        #   - history=None      → rehearsal/explore 비활성 (deterministic)
+        #   - margin_range=(m, m+1) → 단일값 강제 (deterministic margin)
+        #   - preview_cnt_choices=[ep.preview_cnt] → 단일값 강제
+        #   - seed offset 분리
+        plans = _make_plans_core(
+            cfg.seed + ep.seed_offset,
+            n_envs,
+            p_scenario_fixed=ep.p_scenario_fixed,
+            p_type_sampled=ep.p_type_sampled,
+            p_synthetic=ep.p_synthetic,
+            rehearsal_p=ep.rehearsal_p,
+            rollout_idx=rollout_idx,
+            bin_key=ep.bin_alias,
+            margin_range=(ep.margin_x, ep.margin_x + 1),
+            recorded_file_candidates=recorded_files,
+            recorded_file_weights=None,
+            history=None,
+            preview_cnt_choices=[preview_cnt_eval],
+        )
+        # tag 재라벨 (train → eval_*) — 분석/로그/GIF 캡처용
+        for p in plans:
+            mode = p.source.get("mode", "unknown")
+            p.mode = f"eval_{mode}"
         return plans
 
     return plan_maker_eval
@@ -578,80 +686,58 @@ class SourceStat:
 
 @dataclass
 class DatasetHistory:
-    offline: Dict[str, SourceStat] = field(default_factory=lambda: defaultdict(SourceStat))
-    online_type: Dict[str, SourceStat] = field(default_factory=lambda: defaultdict(SourceStat))
-    tsg: Dict[str, SourceStat] = field(default_factory=lambda: defaultdict(SourceStat))
+    recorded:     Dict[str, SourceStat] = field(default_factory=lambda: defaultdict(SourceStat))
+    type_sampled: Dict[str, SourceStat] = field(default_factory=lambda: defaultdict(SourceStat))
+    synthetic:    Dict[str, SourceStat] = field(default_factory=lambda: defaultdict(SourceStat))
 
     ema_alpha: float = 0.2
     min_episodes_master: int = 10
     su_master_threshold: float = 0.85
 
     def _bucket(self, mode: str):
-        return {"offline": self.offline, "online_type": self.online_type, "tsg": self.tsg}[mode]
+        return {"recorded": self.recorded, "type_sampled": self.type_sampled, "synthetic": self.synthetic}[mode]
 
     def record(
         self,
         *,
-        item_mode: str,
-        item_payload: Dict[str, Any],
-        bin_key: str,
-        bin_payload: Dict[str, Any],
+        source_mode: str,
+        source_id: str,
         su: float,
         timesteps: int,
     ) -> None:
-        mode = str(item_mode)
+        """env가 info에 노출한 (source_mode, source_id) 기반 통계 누적.
 
-        # mode별 source_id 정의
-        if mode == "offline":
-            paths = item_payload.get("offline_item_paths", [])
-            source_id = str(paths[0]) if paths else "offline:unknown"
-        elif mode == "online_type":
-            paths = item_payload.get("online_item_type_path", [])
-            source_id = str(paths[0]) if paths else "online_type:unknown"
-        elif mode == "tsg":
-            source_id = "tsg"
-        else:
-            return  # 알 수 없는 모드는 기록 안함
-
-        b = self._bucket(mode)
-        st = b[source_id]
+        DataSource 추상화 (2026-05-04, docs/4 Sec 2-2/2-7 해결):
+        - mode별 분기 제거 — bucket lookup만.
+        - source_id 입자가 source 클래스에서 결정 (synthetic도 cfg variant 별 분리).
+        """
+        try:
+            bucket = self._bucket(str(source_mode))
+        except KeyError:
+            return  # 모르는 모드는 무시
+        st = bucket[str(source_id)]
         st.count += 1
         st.last_su = float(su)
         st.ema_su = (1.0 - self.ema_alpha) * st.ema_su + self.ema_alpha * float(su)
         st.last_ts = int(timesteps)
 
-    # 🔹 새로 추가: plan(dict)에서 바로 기록
-    def record_from_plan_dict(self, plan: Dict[str, Any], su: float, timesteps: int) -> None:
-        if not isinstance(plan, dict):
+    def record_from_info(self, info: Dict[str, Any], su: float, timesteps: int) -> None:
+        """env._build_info의 source_mode/source_id로 바로 기록."""
+        if not isinstance(info, dict):
             return
-
-        item_mode = plan.get("item_mode",
-                     plan.get("item_load_mode",
-                     plan.get("mode", None)))
-        if item_mode is None:
+        mode = info.get("source_mode")
+        sid = info.get("source_id")
+        if not mode or not sid:
             return
-
-        item_payload = dict(plan.get("item_payload",
-                              plan.get("payload", {})) or {})
-        bin_key     = str(plan.get("bin", plan.get("bin_alias", "")))
-        bin_payload = dict(plan.get("bin_payload", {}) or {})
-
-        self.record(
-            item_mode=item_mode,
-            item_payload=item_payload,
-            bin_key=bin_key,
-            bin_payload=bin_payload,
-            su=su,
-            timesteps=timesteps,
-        )
-    # ---- (옵션) 어느 offline source가 '마스터' 되었는지 판단 ----
-    def mastered_offline(self) -> List[str]:
+        self.record(source_mode=mode, source_id=sid, su=su, timesteps=timesteps)
+    # ---- (옵션) 어느 recorded source가 '마스터' 되었는지 판단 ----
+    def mastered_recorded(self) -> List[str]:
         """
-        충분히 많이 등장했고(SU가 안정적으로 높은) offline 소스들 리스트.
+        충분히 많이 등장했고(SU가 안정적으로 높은) recorded 소스들 리스트.
         지금은 코드 어디에서도 안 쓰지만, 나중에 curriculum 짤 때 유용할 수 있음.
         """
         out: List[str] = []
-        for src, st in self.offline.items():
+        for src, st in self.recorded.items():
             if st.count >= self.min_episodes_master and st.ema_su >= self.su_master_threshold:
                 out.append(src)
         return out
@@ -674,9 +760,9 @@ class DatasetHistory:
             }
 
         return {
-            "offline": pack(self.offline),
-            "online_type": pack(self.online_type),
-            "tsg": pack(self.tsg),
+            "recorded": pack(self.recorded),
+            "type_sampled": pack(self.type_sampled),
+            "synthetic": pack(self.synthetic),
         }
 
     # ---- CSV 저장용 row 리스트 만들기 ----
@@ -698,9 +784,9 @@ class DatasetHistory:
                     "last_ts": int(st.last_ts),
                 })
 
-        dump("offline", self.offline)
-        dump("online_type", self.online_type)
-        dump("tsg", self.tsg)
+        dump("recorded", self.recorded)
+        dump("type_sampled", self.type_sampled)
+        dump("synthetic", self.synthetic)
         return rows
 
     # ---- CSV로 저장 ----
@@ -740,7 +826,7 @@ class DatasetHistory:
         path_obj.parent.mkdir(parents=True, exist_ok=True)
 
         with path_obj.open("w", encoding="utf-8") as f:
-            for mode in ["offline", "online_type", "tsg"]:
+            for mode in ["recorded", "type_sampled", "synthetic"]:
                 f.write(f"== {mode} ==\n")
                 mdict = snap.get(mode, {})
                 for src, st in mdict.items():
@@ -753,10 +839,18 @@ class DatasetHistory:
                     )
                 f.write("\n")
 
+    # 옛 mode 이름 → 새 이름 매핑 (옛 dataset_history.csv 호환)
+    _MODE_LEGACY_ALIAS = {
+        "offline":     "recorded",
+        "online_type": "type_sampled",
+        "tsg":         "synthetic",
+    }
+
     def load_csv(self, path: str):
         """
         이전 run에서 저장한 dataset_history.csv를 읽어서
-        offline / online_type / tsg 통계를 복구한다.
+        recorded / type_sampled / synthetic 통계를 복구한다.
+        옛 이름(offline/online_type/tsg)도 자동으로 새 이름으로 매핑.
         """
         path = Path(path)
         if not path.is_file():
@@ -764,9 +858,9 @@ class DatasetHistory:
             return
 
         # 기존 내용 초기화
-        self.offline     = defaultdict(SourceStat)
-        self.online_type = defaultdict(SourceStat)
-        self.tsg         = defaultdict(SourceStat)
+        self.recorded     = defaultdict(SourceStat)
+        self.type_sampled = defaultdict(SourceStat)
+        self.synthetic    = defaultdict(SourceStat)
 
         with path.open("r", newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
@@ -776,9 +870,12 @@ class DatasetHistory:
                 if not mode or not source:
                     continue
 
+                # 옛 이름이면 새 이름으로 변환
+                mode = self._MODE_LEGACY_ALIAS.get(mode, mode)
+
                 try:
                     bucket = self._bucket(mode)
-                except ValueError:
+                except (KeyError, ValueError):
                     # 모르는 mode면 무시
                     continue
 
@@ -992,17 +1089,13 @@ class HistoryCollectorCallback(BaseCallback):
             ep_ret       = float(info.get("return", 0.0))
             steps_in_ep  = int(info.get("steps_in_ep", 0))
             packed_cnt   = int(info.get("packed_count", 0))
-            mode         = str(info.get("item_mode", "unknown"))
-            
-            # [수정] 통합된 변수
-            preview_cnt  = int(info.get("preview_cnt", 0)) 
-            
-            # (삭제됨: head_slots, selectable_len, preview_k)
+            mode         = str(info.get("source_mode", "unknown"))
 
-            # ── DatasetHistory 적립 ─────────────────────
-            plan = info.get("plan", None)
-            if isinstance(plan, dict):
-                self.history.record_from_plan_dict(plan, su=su, timesteps=ts)
+            # [수정] 통합된 변수
+            preview_cnt  = int(info.get("preview_cnt", 0))
+
+            # ── DatasetHistory 적립 (info의 source_mode/source_id 직접 사용) ─
+            self.history.record_from_info(info, su=su, timesteps=ts)
 
             # ── SU running EMA 업데이트 ─────────────────
             self._su_count += 1
@@ -1131,7 +1224,9 @@ class MaskablePPOAgent:
             learning_rate=self.cfg.learning_rate,
             n_steps=self.cfg.n_steps,
             batch_size=self.cfg.batch_size,
+            n_epochs=self.cfg.n_epochs,            # ★ cfg 노출
             gamma=self.cfg.gamma,
+            gae_lambda=self.cfg.gae_lambda,        # ★ cfg 노출 (sparse reward용 0.97)
             ent_coef=self.cfg.ent_coef,
             vf_coef=self.cfg.vf_coef,
             clip_range=self.cfg.clip_range,
@@ -1186,22 +1281,22 @@ class MaskablePPOAgent:
                 self.cfg.rehearsal_p_late,
             ][phase]
 
-            offline_pool, folder_weights = _resolve_offline_pool_and_weights(self.cfg)
-            offline_files = _expand_offline_pool_to_files(offline_pool)
-            offline_file_weights = _distribute_folder_weights_to_files(offline_pool, folder_weights)
+            recorded_pool, folder_weights = _resolve_recorded_pool_and_weights(self.cfg)
+            recorded_files = _expand_recorded_pool_to_files(recorded_pool)
+            recorded_file_weights = _distribute_folder_weights_to_files(recorded_pool, folder_weights)
 
             return _make_plans_core(
                 seed=self.cfg.seed,
                 n_envs=n_envs,
                 p_scenario_fixed=p_fixed,
-                p_online_type=self.cfg.online_type_ratio,
-                p_tsg=self.cfg.tsg_ratio,
+                p_type_sampled=self.cfg.type_sampled_ratio,
+                p_synthetic=self.cfg.synthetic_ratio,
                 rehearsal_p=rehearsal_p,
                 rollout_idx=rollout_idx,
                 bin_key="experiment_RL",
                 margin_range=(0, 8),
-                offline_file_candidates=offline_files,
-                offline_file_weights=offline_file_weights,
+                recorded_file_candidates=recorded_files,
+                recorded_file_weights=recorded_file_weights,
                 history=self.history,
                 selectable_len_choices=self.cfg.selectable_len_choices,
                 preview_k_choices=self.cfg.preview_k_choices,
@@ -1213,10 +1308,7 @@ class MaskablePPOAgent:
 
         # ★ 여기서 최종 plan_maker를 '지금' 할당
         self.plan_maker = plan_maker_hybrid if self.cfg.use_adaptive_phase else time_based_plan_maker
-        self.eval_plan_maker = make_eval_plan_maker(
-            self.cfg,
-            eval_offline_pool=self.cfg.eval_item_paths_pool 
-        )
+        self.eval_plan_maker = make_eval_plan_maker(self.cfg)
 
         # 5) 콜백 스택을 만든다 (plan_maker를 사용)
         self.callbacks = self._make_callbacks(
@@ -1360,10 +1452,7 @@ class MaskablePPOAgent:
         # 평가 plan 캐싱(재현성). 라운드별로 라운드-사이즈만큼 잘라서 사용.
         if getattr(self, "_cached_eval_plans", None) is None:
             print(f"Generating and caching static eval plans ({episodes} episodes)...")
-            plan_maker = make_eval_plan_maker(
-                self.cfg,
-                eval_offline_pool=self.cfg.eval_item_paths_pool,
-            )
+            plan_maker = make_eval_plan_maker(self.cfg)
             self._cached_eval_plans = plan_maker(0, episodes, current_steps=0)
         plans: List[EnvPlan] = self._cached_eval_plans or []
 
@@ -1486,9 +1575,9 @@ class MaskablePPOAgent:
     
 #     # 테스트용 플랜 설정 (오프라인 파일 하나 지정)
 #     test_plan = {
-#         "item_mode": "offline",
+#         "item_mode": "recorded",
 #         "item_payload": {
-#             "offline_item_paths": ["planning/data/Item_data/paper/setting123_discrete/dataset_episode_000.json"],
+#             "recorded_paths": ["planning/data/Item_data/paper/setting123_discrete/dataset_episode_000.json"],
 #             "episode_seed": 123
 #         },
 #         "bin": "experiment_RL"
@@ -1569,24 +1658,38 @@ class MaskablePPOAgent:
 # =============================================================================
 # 무한 학습 코드
 # =============================================================================
+
+
 if __name__ == "__main__":
     import torch
     import glob
-    import os
     import re
-    
+    import argparse
+
     torch.cuda.empty_cache()
+
+    # =========================================================================
+    # ★ CLI 옵션 — preset 선택
+    # =========================================================================
+    parser = argparse.ArgumentParser(description="PalletFit-RL training entry")
+    parser.add_argument(
+        "--preset", choices=["default", "lite"], default="default",
+        help="default = 16C16T + A6000 48GB 기준 / lite = 4C8T + 6GB GPU 호환 (논문 재현용)",
+    )
+    args, _ = parser.parse_known_args()
 
     # =========================================================================
     # ★ [설정] 경로 지정
     # =========================================================================
     LOG_DIR_ROOT = "planning/RL/PalletFit_RL/logs/MaskablePPO_AutoResume"
     # 기존에 학습하던 모델이 있다면 여기에 지정 (없으면 None)
-    SPECIFIC_START_MODEL = "planning/RL/PalletFit_RL/logs/MaskablePPO_20251212-122844/ppo_ckpt_20512_steps.zip" 
+    SPECIFIC_START_MODEL = "planning/RL/PalletFit_RL/logs/MaskablePPO_20251212-122844/ppo_ckpt_20512_steps.zip"
     # =========================================================================
 
     # 1. 에이전트 생성 시 경로 주입 (이제 모든 Callback이 이 경로를 봅니다)
-    cfg = AgentConfig()
+    cfg = make_lite_config() if args.preset == "lite" else AgentConfig()
+    print(f"⚙️  Preset: {args.preset}  (n_envs_train={cfg.n_envs_train}, "
+          f"n_steps={cfg.n_steps}, batch_size={cfg.batch_size})")
     agent = MaskablePPOAgent(cfg=cfg, override_log_dir=LOG_DIR_ROOT)
     
     # Logger 다시 세팅 (확실하게 하기 위해)
@@ -1637,7 +1740,8 @@ if __name__ == "__main__":
             
             # Timesteps 복구
             match = re.search(r"(\d+)_steps", str(target_ckpt))
-            if not match: match = re.search(r"ckpt_(\d+)", str(target_ckpt))
+            if not match: 
+                match = re.search(r"ckpt_(\d+)", str(target_ckpt))
             
             if match:
                 prev_steps = int(match.group(1))

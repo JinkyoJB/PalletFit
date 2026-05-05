@@ -193,14 +193,15 @@ class Packer(LogicalState):
         self.problem = kwargs.get('problem', 'online')
         # default: packingModel에 따라 packing, custom: custom packingModel
         self.packing_mode = kwargs.get('packing_mode', 'palletizing')
-        # online_given_type: 주어진 item type_list 중에서 random하게 item을
-        # 생성하여 packing, offline: 주어진 item list를 packing
+        # type_sampled: 주어진 item type_list 중에서 random하게 item을 생성하여 packing
+        # recorded:     주어진 item list를 packing
         self.model = kwargs.get('model', "PalletFit_RL")
-        self.offline_item_path = kwargs.get('offline_item_path', None)
-        # GUI에서 사용안함. online_given_type에서 사용
-        self.online_item_type_path = kwargs.get(
-            'online_item_type_path', None
-        )
+        # 새 이름 우선, 옛 kwarg(offline_item_path / online_item_type_path)도 backward-compat
+        self.recorded_path = kwargs.get('recorded_path',
+                                        kwargs.get('offline_item_path', None))
+        # GUI에서 사용안함. type_sampled 모드에서 사용
+        self.type_sampled_path = kwargs.get('type_sampled_path',
+                                            kwargs.get('online_item_type_path', None))
         # GUI에서 사용안함.
         self.direct_item_list = kwargs.get('direct_item_list', None)
         # 'EDP', 'CP', 'EP', 'EMS' 중 하나
@@ -352,10 +353,10 @@ class Packer(LogicalState):
         self.last_posori = None  # 마지막으로 포장한 아이템의 위치 및 자세 정보
 
         if self.problem == 'offline':
-            self._load_offline_data()
+            self._load_recorded_data()
             
         elif self.problem == 'online_given_type':
-            self._load_online_item_type_data()
+            self._load_type_sampled_data()
 
         elif 'online' in self.problem:
             pass
@@ -571,13 +572,13 @@ class Packer(LogicalState):
         return item_list
 
 
-    def _load_offline_data(self):
+    def _load_recorded_data(self):
         """
-        offline_item_path로부터 items를 읽어온 뒤, Item 객체로 변환하여 self.items_list에 저장
+        recorded_path로부터 items를 읽어온 뒤, Item 객체로 변환하여 self.items_list에 저장
         """
-        item_dicts = load_offline_data(self.offline_item_path)  # ➋ 공통 로딩
+        item_dicts = load_offline_data(self.recorded_path)  # ➋ 공통 로딩
         if item_dicts is None:
-            self.log(f"Error: File {self.offline_item_path} not found.")
+            self.log(f"Error: File {self.recorded_path} not found.")
             return None
 
         for item_info in item_dicts:
@@ -586,19 +587,19 @@ class Packer(LogicalState):
 
         return item_dicts
     
-    def _load_online_item_type_data(self):
+    def _load_type_sampled_data(self):
         """
         online_item_type_list를 읽어온 뒤, 
         해당 타입들의 속성을 기반으로 새로운 Item 인스턴스를 생성하여 self.items_list에 추가.
         """
         try:
             # 1. 파일 읽기
-            with open(self.online_item_type_path, 'r') as file:
-                if self.online_item_type_path.endswith('.json'):
+            with open(self.type_sampled_path, 'r') as file:
+                if self.type_sampled_path.endswith('.json'):
                     item_type_list = json.load(file)
-                elif self.online_item_type_path.endswith('.txt'):
+                elif self.type_sampled_path.endswith('.txt'):
                     item_type_list = file.read().splitlines()
-                elif self.online_item_type_path.endswith('.csv'):
+                elif self.type_sampled_path.endswith('.csv'):
                     item_type_list = file.read().split(',')
             
             # 2. 템플릿(Type) 리스트 생성 (이들은 생성용 '거푸집' 역할만 함)
@@ -645,7 +646,7 @@ class Packer(LogicalState):
             # self.log(f"Generated {len(self.items_list)} random items from {len(self.item_types)} types.")
 
         except FileNotFoundError:
-            self.log(f"Error: File {self.online_item_type_path} not found.")
+            self.log(f"Error: File {self.type_sampled_path} not found.")
             return None
        
 

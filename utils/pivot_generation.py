@@ -157,7 +157,7 @@ def project_vertices_left_to_pivots(bin):
     return uniq_pivots
 
 
-def project_lines_left_to_pivots(bin):
+def project_lines_left_to_pivots(bin, visible_items=None, plane_items=None):
     """
     - 왼쪽 시점에서 보이는 '좌측 모서리 2개'만을 고려.
     - edge 선분(v0, v1)을 Bin/아이템의 right-face들에 직각 투사.
@@ -165,9 +165,13 @@ def project_lines_left_to_pivots(bin):
       다른 Item AABB 가 하나라도 있으면 **후보에서 제외**.
     - 조건을 모두 통과한 후보 face 에 대해서 투사 결과 점(들)을
       Pivot 으로 변환 후, margin·충돌·중복 검사 과정을 거쳐 리스트 반환.
+
+    Phase 1.1 (2026-05-04): visible_items / plane_items를 외부에서 주입 가능.
+                            None이면 기존 동작(직접 호출)으로 fallback.
     """
     mx, my = bin.margin_x, bin.margin_y
     pivots = []
+    seen   = set()   # Phase 1.2: 같은 (x, y, z, rt) Pivot 중복 생성 방지
 
     # ── (A) Edge(line) 소스: 좌측 모서리 2개만 ──────────────────
     EDGE_PAIRS = [
@@ -175,8 +179,11 @@ def project_lines_left_to_pivots(bin):
         (2, 6),      # right-front   vertical
     ]
 
+    if visible_items is None:
+        visible_items = bin.get_visible_items_topdown()
+
     line_sources = []
-    for it in bin.get_visible_items_topdown():
+    for it in visible_items:
         verts = it.getVertices()
         for i0, i1 in EDGE_PAIRS:
             line_sources.append(
@@ -184,7 +191,8 @@ def project_lines_left_to_pivots(bin):
             )
 
     # ── (B) 투사 대상 right-face 들 ────────────────────────────
-    plane_items = [*bin.get_all_items(), bin]
+    if plane_items is None:
+        plane_items = [*bin.get_all_items(), bin]
 
     # ── (C) find right-faces that are NOT blocked ─────────────
     def _candidate_right_faces_line(line_id, v0, v1):
@@ -304,6 +312,12 @@ def project_lines_left_to_pivots(bin):
                 for rt in RotationType.BasicRotation[0]:
                     if rt is None:
                         continue
+                    # Phase 1.2: dedup BEFORE Pivot 생성 (중복 객체 90%+ 제거)
+                    rt_key = tuple(map(float, rt))
+                    key = (px, py, pz, rt_key)
+                    if key in seen:
+                        continue
+                    seen.add(key)
                     pivots.append(
                         Pivot(px, py, pz,
                               rt,
@@ -312,17 +326,7 @@ def project_lines_left_to_pivots(bin):
                               bench_bin=bin)
                     )
 
-
-    # ── (E) 중복 제거 후 반환 ─────────────────────────────────
-    uniq_keys, uniq_pivots = set(), []
-    for pv in pivots:
-        key = (float(pv.x), float(pv.y), float(pv.z),
-               tuple(map(float, pv.rt)))
-        if key not in uniq_keys:
-            uniq_keys.add(key)
-            uniq_pivots.append(pv)
-
-    return uniq_pivots
+    return pivots   # 진입 단계에서 이미 dedup됨
 
 
 def project_vertices_front_to_pivots(bin):
@@ -419,7 +423,7 @@ def project_vertices_front_to_pivots(bin):
 
     return uniq_pivots
 
-def project_lines_front_to_pivots(bin):
+def project_lines_front_to_pivots(bin, visible_items=None, plane_items=None):
     """
     - 앞쪽 시점에서 보이는 '뒤쪽(Back) 모서리 2개'만을 고려.
     - edge 선분(v0, v1)을 Bin/아이템의 back-face들에 직각 투사.
@@ -427,9 +431,12 @@ def project_lines_front_to_pivots(bin):
       다른 Item AABB 가 하나라도 있으면 **후보에서 제외**.
     - 조건을 모두 통과한 후보 face 에 대해 투사 결과 점(들)을
       Pivot 으로 변환 → margin·충돌·중복 검사 후 리스트 반환.
+
+    Phase 1.1 (2026-05-04): visible_items / plane_items를 외부에서 주입 가능.
     """
     mx, my = bin.margin_x, bin.margin_y
     pivots = []
+    seen   = set()   # Phase 1.2
 
     # ── (A) Edge(line) 소스: 뒤쪽 모서리 2개 ──────────────────────
     EDGE_PAIRS = [
@@ -437,8 +444,11 @@ def project_lines_front_to_pivots(bin):
         (2, 6),      # back-right vertical
     ]
 
+    if visible_items is None:
+        visible_items = bin.get_visible_items_topdown()
+
     line_sources = []
-    for it in bin.get_visible_items_topdown():
+    for it in visible_items:
         verts = it.getVertices()
         for i0, i1 in EDGE_PAIRS:
             line_sources.append(
@@ -446,7 +456,8 @@ def project_lines_front_to_pivots(bin):
             )
 
     # ── (B) 투사 대상 back-face 들 ────────────────────────────────
-    plane_items = [*bin.get_all_items(), bin]
+    if plane_items is None:
+        plane_items = [*bin.get_all_items(), bin]
 
     # ── (C) 선분 하나당 ‘차단 없는’ 후보 back-faces 찾기 ─────────
     def _candidate_back_faces_line(line_id, v0, v1):
@@ -566,6 +577,12 @@ def project_lines_front_to_pivots(bin):
                 for rt in RotationType.BasicRotation[0]:
                     if rt is None:
                         continue
+                    # Phase 1.2: dedup BEFORE Pivot 생성
+                    rt_key = tuple(map(float, rt))
+                    key = (px, py, pz, rt_key)
+                    if key in seen:
+                        continue
+                    seen.add(key)
                     pivots.append(
                         Pivot(px, py, pz,
                               rt,
@@ -574,16 +591,7 @@ def project_lines_front_to_pivots(bin):
                               bench_bin=bin)
                     )
 
-    # ── (E) 중복 제거 후 반환 ───────────────────────────────────
-    uniq_keys, uniq_pivots = set(), []
-    for pv in pivots:
-        key = (float(pv.x), float(pv.y), float(pv.z),
-               tuple(map(float, pv.rt)))
-        if key not in uniq_keys:
-            uniq_keys.add(key)
-            uniq_pivots.append(pv)
-
-    return uniq_pivots
+    return pivots   # Phase 1.2: 진입 단계에서 이미 dedup됨
 
 def project_vertices_right_to_pivots(bin):
     """
@@ -786,17 +794,20 @@ def project_vertices_down_to_pivots(bin):
     return uniq_pivots
 
 
-def project_lines_down_to_pivots(bin):
+def project_lines_down_to_pivots(bin, visible_items=None, plane_items=None):
     '''
     위쪽 시점에서 보이는 '위쪽'모서리 4개만을 고려.
     - edge 선분(v0, v1)을 Bin/아이템의 top-face들에 직각 투사.
     - 투사된 top-face와 선분 사이( z ∈ (z_face, z_edge] ) 에
       다른 Item AABB 가 하나라도 있으면 **후보에서 제외**.
     - 조건을 모두 통과한 후보 face 에 대해 투사 결과 점(들)을
-      Pivot 으로 변환 → margin·충돌·중복 검사 후 리스트 반환.    
+      Pivot 으로 변환 → margin·충돌·중복 검사 후 리스트 반환.
+
+    Phase 1.1 (2026-05-04): visible_items / plane_items를 외부에서 주입 가능.
     '''
     mx, my = bin.margin_x, bin.margin_y
     pivots = []
+    seen   = set()   # Phase 1.2
 
     # ── (A) Edge(line) 소스: 위쪽 모서리 4개 ─────────────────────
     EDGE_PAIRS = [
@@ -806,8 +817,11 @@ def project_lines_down_to_pivots(bin):
         (4,7)      # top-back  vertical
     ]
 
+    if visible_items is None:
+        visible_items = bin.get_visible_items_topdown()
+
     line_sources = []
-    for it in bin.get_visible_items_topdown():
+    for it in visible_items:
         verts = it.getVertices()
         for i0, i1 in EDGE_PAIRS:
             line_sources.append(
@@ -815,7 +829,8 @@ def project_lines_down_to_pivots(bin):
             )
 
     # ── (B) 투사 대상 back-face 들 ────────────────────────────────
-    plane_items = [*bin.get_all_items(), bin]
+    if plane_items is None:
+        plane_items = [*bin.get_all_items(), bin]
 
     # ── (C) 선분 하나당 ‘차단 없는’ 후보 top-faces 찾기 ───────────
     def _candidate_top_faces_line(line_id, v0, v1):
@@ -896,29 +911,27 @@ def project_lines_down_to_pivots(bin):
                             continue
 
                     # Bin 경계 체크
-                    if (0 <= px <= bin.width and 
-                        0 <= py <= bin.height and 
+                    if (0 <= px <= bin.width and
+                        0 <= py <= bin.height and
                         0 <= pz <= bin.depth):
+                        rpx, rpy, rpz = round(px, 3), round(py, 3), round(pz, 3)
                         for rt in RotationType.BasicRotation[0]:
                             if rt is None:
                                 continue
+                            # Phase 1.2: dedup BEFORE Pivot 생성
+                            rt_key = tuple(map(float, rt))
+                            key = (rpx, rpy, rpz, rt_key)
+                            if key in seen:
+                                continue
+                            seen.add(key)
                             pivots.append(
-                                Pivot(round(px,3), round(py,3), round(pz,3),
+                                Pivot(rpx, rpy, rpz,
                                       rt,
                                       direction='down-edge',   # 시선(top) 기준
                                       bench_bin=bin)
                             )
-    
-    # ── (E) 중복 제거 후 반환 ───────────────────────────────────
-    uniq_keys, uniq_pivots = set(), []
-    for pv in pivots:
-        key = (float(pv.x), float(pv.y), float(pv.z),
-               tuple(map(float, pv.rt)))
-        if key not in uniq_keys:
-            uniq_keys.add(key)
-            uniq_pivots.append(pv)
 
-    return uniq_pivots
+    return pivots   # Phase 1.2: 진입 단계에서 이미 dedup됨
 
 def project_vertices_top_to_pivots(bin):
     """
@@ -1378,6 +1391,7 @@ def project_lines_down_to_pivots2left(bin, pivots):
     '''
     mx, my = bin.margin_x, bin.margin_y
     candidates = []
+    seen       = set()   # Phase 1.2
 
     for pv in pivots:
         pv_x = max(0, pv.x - EPS)
@@ -1420,11 +1434,18 @@ def project_lines_down_to_pivots2left(bin, pivots):
 
                 # 빈자리 검사
                 if (0 <= px <= bin.width and 0 <= py <= bin.height and 0 <= pz <= bin.depth):
+                    rpx, rpy, rpz = round(px, 3), round(py, 3), round(pz, 3)
                     for rt in RotationType.BasicRotation[0]:
                         if rt is None:
                             continue
+                        # Phase 1.2: dedup BEFORE Pivot 생성
+                        rt_key = tuple(map(float, rt))
+                        key = (rpx, rpy, rpz, rt_key)
+                        if key in seen:
+                            continue
+                        seen.add(key)
                         candidates.append(
-                            Pivot(round(px,3), round(py,3), round(pz,3),
+                            Pivot(rpx, rpy, rpz,
                                     rt,
                                     direction='left2-edge',
                                     bench_bin=bin)
@@ -1454,11 +1475,18 @@ def project_lines_down_to_pivots2left(bin, pivots):
                         continue
                 # 빈자리 검사
                 if (0 <= px <= bin.width and 0 <= py <= bin.height and 0 <= pz <= bin.depth):
+                    rpx, rpy, rpz = round(px, 3), round(py, 3), round(pz, 3)
                     for rt in RotationType.BasicRotation[0]:
                         if rt is None:
                             continue
+                        # Phase 1.2: dedup BEFORE Pivot 생성
+                        rt_key = tuple(map(float, rt))
+                        key = (rpx, rpy, rpz, rt_key)
+                        if key in seen:
+                            continue
+                        seen.add(key)
                         candidates.append(
-                            Pivot(round(px,3), round(py,3), round(pz,3),
+                            Pivot(rpx, rpy, rpz,
                                     rt,
                                     direction='left2-edge',
                                     bench_bin=bin)
@@ -1480,6 +1508,7 @@ def project_lines_down_to_pivots2front(bin, pivots):
     '''
     mx, my = bin.margin_x, bin.margin_y
     candidates = []
+    seen       = set()   # Phase 1.2
     for pv in pivots:
         pv_y = max(0, pv.y - EPS)
         # pv.y보다 작거나 같은 곳에 있는 아이템을 찾는다
@@ -1520,11 +1549,18 @@ def project_lines_down_to_pivots2front(bin, pivots):
 
                 # 빈자리 검사
                 if (0 <= px <= bin.width and 0 <= py <= bin.height and 0 <= pz <= bin.depth):
+                    rpx, rpy, rpz = round(px, 3), round(py, 3), round(pz, 3)
                     for rt in RotationType.BasicRotation[0]:
                         if rt is None:
                             continue
+                        # Phase 1.2: dedup BEFORE Pivot 생성
+                        rt_key = tuple(map(float, rt))
+                        key = (rpx, rpy, rpz, rt_key)
+                        if key in seen:
+                            continue
+                        seen.add(key)
                         candidates.append(
-                            Pivot(round(px,3), round(py,3), round(pz,3),
+                            Pivot(rpx, rpy, rpz,
                                     rt,
                                     direction='front2-edge',
                                     bench_bin=bin)
@@ -1554,11 +1590,18 @@ def project_lines_down_to_pivots2front(bin, pivots):
                         continue
                 # 빈자리 검사
                 if (0 <= px <= bin.width and 0 <= py <= bin.height and 0 <= pz <= bin.depth):
+                    rpx, rpy, rpz = round(px, 3), round(py, 3), round(pz, 3)
                     for rt in RotationType.BasicRotation[0]:
                         if rt is None:
                             continue
+                        # Phase 1.2: dedup BEFORE Pivot 생성
+                        rt_key = tuple(map(float, rt))
+                        key = (rpx, rpy, rpz, rt_key)
+                        if key in seen:
+                            continue
+                        seen.add(key)
                         candidates.append(
-                            Pivot(round(px,3), round(py,3), round(pz,3),
+                            Pivot(rpx, rpy, rpz,
                                     rt,
                                     direction='front2-edge',
                                     bench_bin=bin)

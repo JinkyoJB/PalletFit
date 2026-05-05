@@ -22,7 +22,7 @@ while true; do
     echo "🚀 Round $count: Starting agent.py..."
     echo "========================================================"
 
-    python planning/RL/PalletFit_RL/agent.py
+    python planning/RL/PalletFit_RL/agent.py "$@"
 
     exit_code=$?
     if [ $exit_code -ne 0 ]; then
