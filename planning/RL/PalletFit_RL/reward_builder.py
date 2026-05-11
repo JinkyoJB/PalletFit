@@ -16,7 +16,7 @@ from utils.get_value import (
 # [Per-placement 정액 보너스] - dense gradient용
 # 매 successful placement마다 동일 값 → 작은-큰 박스 모두 placement 자체에 동일 신호.
 # (옛 ALIVE_BONUS의 새 의미: "뭐든 놓으면 +" — 작은 박스 무시 방지)
-ALIVE_BONUS: float = 0.5
+ALIVE_BONUS: float = 1.0   # was 0.5 (5/10 plateau 대응 — terminal_su 발화 빈도 ↑ 유도)
 
 # [1순위: 효율성 (Efficiency)] - 점수 엔진
 # ★ 옵션 D 적용 (2026-05-01): per-step ΔSU 신호를 제거하고

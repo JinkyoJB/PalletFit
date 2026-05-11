@@ -115,7 +115,7 @@ class BootstrapPolicy:
 class AgentConfig:
     device: str = "cuda" if th.cuda.is_available() else "cpu"
     seed: int = 1456
-    total_timesteps: int = 20_000_000
+    total_timesteps: int = 12_000_000   # 5/15 마감 기준 (fps≈16에서 9일 안 도달 가능). 이어서 학습 시 늘리면 됨.
 
     # ── PPO 핵심 ─────────────────────────────────────────────────
     # 2026-05-05: sparse reward(terminal_su) 적응 + 자원 활용 패키지 (Sec ?? 참조)
@@ -123,7 +123,7 @@ class AgentConfig:
     gamma: float = 0.999
     gae_lambda: float = 0.97             # ★ NEW: sparse reward → long-horizon credit 전파 (default 0.95에서 ↑)
     n_steps: int = 2048                  # was 1024 — n_envs 16으로 줄였으니 rollout 32k 유지
-    batch_size: int = 8192               # was 4096 — A6000 추가 활용 (minibatches 8 → 4)
+    batch_size: int = 2048               # 8192/4096 시도 모두 OOM — candidate encoder N 배 확장으로 batch에 민감
     n_epochs: int = 10                   # ★ NEW (cfg 노출, default SB3 동일)
 
     ent_coef: float = 0.05               # was 0.03 — sparse reward에서 exploration 보강
@@ -136,7 +136,7 @@ class AgentConfig:
     n_envs_train: int = 16               # was 32 — 16 physical cores와 1:1 매핑
     n_envs_eval: int = 8                 # was 5  — eval 통계 표본 ↑ (학습 시 16 + 평가 시 8 = 24 procs)
     # rollout = n_envs_train × n_steps = 16 × 2048 = 32,768 transitions per update
-    # minibatches = 32768 / 8192 = 4
+    # minibatches = 32768 / 2048 = 16
 
     # ── 주기(롤아웃 단위) 저장/평가 ────────────────────────────────
     # rollout이 32k로 커졌으니 같은 timesteps 도달까지 rollout 수가 1/10 → 주기 단축
@@ -1164,9 +1164,27 @@ def make_single_env(seed: int, tb_log_dir: str, *, is_render_env: bool = False):
         return Monitor(env, info_keywords=info_keys)
     return _thunk
 
+def _spawn_workers_without_gpu(thunks) -> VecEnv:
+    """SubprocVecEnv를 띄우되 worker는 GPU 못 보게 함.
+
+    Worker는 env.step만 하지 정책 forward는 main process에서 일어나므로 GPU 불필요.
+    그런데 torch import 부산물로 CUDA context (~900MB/proc) 생성됨 → 16 worker × 900MB = ~14GB 낭비.
+    CUDA_VISIBLE_DEVICES=""로 spawn하면 worker가 GPU 자체를 못 봐서 context 안 만듦.
+    Main process는 변수 복원으로 그대로 GPU 사용.
+    """
+    saved = os.environ.get("CUDA_VISIBLE_DEVICES")
+    os.environ["CUDA_VISIBLE_DEVICES"] = ""
+    try:
+        return SubprocVecEnv(thunks, start_method="spawn")
+    finally:
+        if saved is None:
+            os.environ.pop("CUDA_VISIBLE_DEVICES", None)
+        else:
+            os.environ["CUDA_VISIBLE_DEVICES"] = saved
+
 def make_envs(*, mode: str, n_envs: int, base_seed: int, tb_log_dir: str) -> VecEnv:
     thunks = [make_single_env(base_seed + i, tb_log_dir) for i in range(n_envs)]
-    venv: VecEnv = SubprocVecEnv(thunks, start_method="spawn")
+    venv: VecEnv = _spawn_workers_without_gpu(thunks)
     venv = VecMonitor(venv, filename=str(Path(tb_log_dir) / f"monitor_{mode}"))
     return venv
 
@@ -1176,7 +1194,7 @@ def make_eval_env(*, n_envs: int, base_seed: int, tb_log_dir: str) -> VecEnv:
         make_single_env(base_seed + i, tb_log_dir, is_render_env=(i == 0))
         for i in range(n_envs)
     ]
-    venv: VecEnv = SubprocVecEnv(thunks, start_method="spawn")
+    venv: VecEnv = _spawn_workers_without_gpu(thunks)
     venv = VecMonitor(venv, filename=str(Path(tb_log_dir) / "monitor_eval"))
     return venv
 
@@ -1769,8 +1787,7 @@ if __name__ == "__main__":
     agent.model.learn(
         total_timesteps=CHUNK_SIZE,
         callback=agent.callbacks,
-        reset_num_timesteps=False, 
-        progress_bar=True
+        reset_num_timesteps=False,
     )
     
     # 5. 저장 (AutoResume 폴더에 저장됨)

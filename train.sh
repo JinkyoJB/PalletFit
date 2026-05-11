@@ -9,6 +9,12 @@
 
 echo "Starting PalletFit-RL Training Loop..."
 
+# ─── PYTHONPATH: 프로젝트 root를 import 경로에 포함 (planning.* import용) ────
+export PYTHONPATH="$(cd "$(dirname "$0")" && pwd):${PYTHONPATH}"
+
+# ─── PyTorch CUDA: fragmentation 완화 (큰 minibatch alloc 시 안전망) ─────────
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
 # ─── CPU thread limits (prevents Load Avg 700+ on multi-core machines) ───────
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1

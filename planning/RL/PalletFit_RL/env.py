@@ -39,7 +39,7 @@ class PalletFitEnv(gym.Env):
         *,
         seed: int = 0,
         tb_log_dir: Optional[str | Path] = None,
-        max_retry_per_step: int = 20,
+        max_retry_per_step: int = 40,   # was 20 (5/10 plateau 대응 — episode 길이 ↑로 terminal_su 도달 기회 ↑)
         is_render_env: bool = False,
         gif_fps: int = 4,
     ):
