@@ -90,8 +90,8 @@ class ImgWeightOptimEnv(gym.Env):
                  item_mode: Literal["json", "episode_dir"] = "json",
                  episode_dir: str | Path | None = None,
                  episode_pattern: str = "dataset_episode_*.json",
-                 item_json: str | Path = "$PALLETFIT_ROOT/planning/data/Item_data/paper/setting123_discrete/dataset_episode_001.json",
-                 debug_img_dir: str | Path | None = "$PALLETFIT_ROOT/planning/RL/SB3/img_weight_optim/debug_img",
+                 item_json: str | Path = "planning/data/Item_data/paper/setting123_discrete/dataset_episode_001.json",
+                 debug_img_dir: str | Path | None = "planning/RL/SB3/img_weight_optim/debug_img",
                  debug_save_every: int = GLOBAL_DEBUG_SAVE_EVERY,
                  worker_id: int = 0,
                  log_to_console: bool = True,
@@ -261,7 +261,7 @@ class ImgWeightOptimEnv(gym.Env):
         Image.fromarray(arr).save(self.debug_dir / fname)
 
     def _save_arr2png(self, arr, fname: str):
-        out_dir = Path("$PALLETFIT_ROOT/planning/RL/SB3/img_weight_optim/debug")
+        out_dir = Path("planning/RL/SB3/img_weight_optim/debug")
         out_dir.mkdir(parents=True, exist_ok=True)
         a = np.asarray(arr)
         if a.ndim == 3 and a.shape[0] in (1, 3, 4):  # CHW로 추정

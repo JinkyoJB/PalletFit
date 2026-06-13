@@ -1,8 +1,13 @@
 import argparse
 import os
+import sys
 import torch
 from src import Tetris3D, Net3D, VGG3D
 import numpy as np
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from utils.env_paths import env_path
 
 seed = 44
 
@@ -19,7 +24,9 @@ def get_args():
     parser.add_argument("--save_frame", type=bool, default=True)
     parser.add_argument("--convert_gif", type=bool, default=True)
 
-    weight_file = '$TETRIS3D_ROOT/weightFiles3D_20241203-090442__batch_mini_replay100_batch16/model_50000.pth'  # 저장된 모델 파일의 이름 (필요에 따라 변경)
+    # Pretrained DQN weight; set DQN_WEIGHT in your .env (see .env.example)
+    _w = env_path("DQN_WEIGHT")
+    weight_file = str(_w) if _w else 'weights/Tetris3D/model_50000.pth'
     parser.add_argument("--saved_path", type=str, default=weight_file)
     weight_name = weight_file.split('/')[-2] +'_'+ weight_file.split('/')[-1]
     parser.add_argument("--out_images", type=str, default=f'test/{weight_name}_{seed}/')

@@ -1,24 +1,24 @@
 '''
 # 예시 1: 최종 모델로 3개 에피소드, 결정론적으로 실행
 python planning/RL/SB3/heu_rewards_RL/test.py \
-  --model $PALLETFIT_ROOT/planning/RL/SB3/heu_rewards_RL/logs_20250910/final_model.zip \
+  --model planning/RL/SB3/heu_rewards_RL/logs_20250910/final_model.zip \
   --episode_dir planning/data/Item_data/paper/setting123_discrete \
   --n_episodes 3 --det
 
 # 예시 2: best 모델로 3개 에피소드, 스토캐스틱 실행
 python planning/RL/SB3/heu_rewards_RL/test.py \
-  --model $PALLETFIT_ROOT/planning/RL/SB3/heu_rewards_RL/logs_20250910/best/best_model.zip \
+  --model planning/RL/SB3/heu_rewards_RL/logs_20250910/best/best_model.zip \
   --n_episodes 3 --stochastic
 
 # 예시 3: 특정 에피소드 파일만 고정해서 순환 테스트
 python planning/RL/SB3/heu_rewards_RL/test.py \
-  --model $PALLETFIT_ROOT/planning/RL/SB3/heu_rewards_RL/logs_20250910/final_model.zip \
+  --model planning/RL/SB3/heu_rewards_RL/logs_20250910/final_model.zip \
   --fixed_eps planning/data/Item_data/paper/setting123_discrete/dataset_episode_619.json \
               planning/data/Item_data/paper/setting123_discrete/dataset_episode_1001.json
 
 # 예시 4: 최종 모델로 3개 에피소드
 python planning/RL/SB3/heu_rewards_RL/test.py \
-  --model $PALLETFIT_ROOT/planning/RL/SB3/heu_rewards_RL/logs/ckpt/auxppo_20000_steps.zip\
+  --model planning/RL/SB3/heu_rewards_RL/logs/ckpt/auxppo_20000_steps.zip\
   --episode_dir planning/data/Item_data/paper/setting123_discrete \
   --n_episodes 3 --det
 '''

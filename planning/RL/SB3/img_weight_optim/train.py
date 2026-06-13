@@ -21,6 +21,7 @@ from stable_baselines3.common.callbacks import ProgressBarCallback
 from planning.RL.SB3.param_tune.callbacks_epoch_announce import EpochAnnounceCallback
 import math
 from sb3_contrib import RecurrentPPO
+from utils.env_paths import repo_path
 
 
 def cosine_lr_fn(base_lr: float, min_lr: float = 1e-5):
@@ -45,7 +46,7 @@ ROOT                = Path("planning/RL/SB3/img_weight_optim")
 
 ITEM_SEED           = 42
 USE_EPISODE_DIR     = True
-EPISODE_DIR         = Path("$PALLETFIT_ROOT/planning/data/Item_data/paper/setting123_discrete")
+EPISODE_DIR         = repo_path("planning", "data", "Item_data", "paper", "setting123_discrete")
 ITEM_JSON_PATH      = "planning/data/Item_data/skt/demo_skt3.json"
 
 CKPT_PATH           = ROOT / "checkpoints" / "topk_su_step01425408_metric48_700000.zip"

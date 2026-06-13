@@ -1,13 +1,18 @@
 # save_trajs_to_json.py
-import os, json
+import os, json, sys
+from pathlib import Path
 import numpy as np
 import pandas as pd
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from utils.env_paths import repo_path
+
 # ===== 입력 경로 =====
-TRJS_NPY = "$PALLETFIT_ROOT/planning/RL/PCT/logs/evaluation/jk-2025.08.25-11-33-44/trajs.npy"
+TRJS_NPY = str(repo_path("planning", "RL", "PCT", "logs", "evaluation",
+                         "jk-2025.08.25-11-33-44", "trajs.npy"))
 
 # ===== 출력 경로 (요청 경로) =====
-SAVE_DIR = "$PALLETFIT_ROOT/planning/data/Item_data/paper"
+SAVE_DIR = str(repo_path("planning", "data", "Item_data", "paper"))
 
 # ===== 스케일(그리드→mm) & 원점 보정 =====
 SCALE_X = 1.0

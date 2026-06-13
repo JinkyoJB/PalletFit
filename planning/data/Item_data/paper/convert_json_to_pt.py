@@ -3,8 +3,13 @@ import json
 import torch
 import glob
 import os
+import sys
 import argparse
 import random
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from utils.env_paths import repo_path, env_path
 
 def convert_dataset(input_dir, output_file, setting):
     """
@@ -65,13 +70,16 @@ def convert_dataset(input_dir, output_file, setting):
         # 예: (0.3, 0.4, 0.2, 0.919694) 가 나와야 함
 
 if __name__ == "__main__":
+    _pct = env_path("PCT_REPO")
+    _default_out = (str(_pct / "dataset" / "my_testset.pt") if _pct
+                    else str(repo_path("planning", "data", "Item_data", "paper", "my_testset.pt")))
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input_dir", type=str, 
-                        default="$PALLETFIT_ROOT/planning/data/Item_data/paper/testset",
+    parser.add_argument("--input_dir", type=str,
+                        default=str(repo_path("planning", "data", "Item_data", "paper", "testset")),
                         help="JSON 폴더 경로")
-    parser.add_argument("--output_file", type=str, 
-                        default="$PCT_REPO/dataset/my_testset.pt",
-                        help="저장할 .pt 파일 경로")
+    parser.add_argument("--output_file", type=str,
+                        default=_default_out,
+                        help="저장할 .pt 파일 경로 (PCT_REPO 설정 시 그쪽 dataset/ 으로)")
     parser.add_argument("--setting", type=int, default=3, help="실험 세팅 번호 (1, 2, 3)")
     
     args = parser.parse_args()

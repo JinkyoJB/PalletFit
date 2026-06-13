@@ -1,18 +1,27 @@
 # pt_dataset_to_items_json.py
-import os, json
+import os, json, sys
+from pathlib import Path
 import torch
 
-PT_PATH1 = "$PALLETFIT_ROOT/planning/RL/PCT/dataset/setting123_discrete.pt"
-OUT_DIR1 = "$PALLETFIT_ROOT/planning/data/Item_data/paper/setting123_discrete"
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from utils.env_paths import repo_path, env_path
 
-PT_PATH2 = "$PALLETFIT_ROOT/planning/RL/PCT/dataset/setting2_continuous.pt"
-OUT_DIR2 = "$PALLETFIT_ROOT/planning/data/Item_data/paper/setting2_continuous"
+_PCT_DATASET = repo_path("planning", "RL", "PCT", "dataset")
+_PAPER_DIR = repo_path("planning", "data", "Item_data", "paper")
 
-PT_PATH3 = "$PALLETFIT_ROOT/planning/RL/PCT/dataset/setting13_continuous.pt"
-OUT_DIR3 = "$PALLETFIT_ROOT/planning/data/Item_data/paper/continuous_setting13"
+PT_PATH1 = str(_PCT_DATASET / "setting123_discrete.pt")
+OUT_DIR1 = str(_PAPER_DIR / "setting123_discrete")
 
-PT_PATH4 = "$DRL_REPO/dataset/rs.pt"
-OUT_DIR4 = "planning/data/Item_data/paper_drl/rs"
+PT_PATH2 = str(_PCT_DATASET / "setting2_continuous.pt")
+OUT_DIR2 = str(_PAPER_DIR / "setting2_continuous")
+
+PT_PATH3 = str(_PCT_DATASET / "setting13_continuous.pt")
+OUT_DIR3 = str(_PAPER_DIR / "continuous_setting13")
+
+# External Online-3D-BPP-DRL dataset (set DRL_REPO in your .env)
+_DRL_REPO = env_path("DRL_REPO")
+PT_PATH4 = str(_DRL_REPO / "dataset" / "rs.pt") if _DRL_REPO else "<set DRL_REPO in .env>/dataset/rs.pt"
+OUT_DIR4 = str(repo_path("planning", "data", "Item_data", "paper_drl", "rs"))
 
 PT_PATH = PT_PATH4
 OUT_DIR = OUT_DIR4
