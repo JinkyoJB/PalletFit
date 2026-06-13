@@ -21,3 +21,7 @@ planning/RL/DQN/reference/logs/
 # Model weights: only best_model.zip is published (via Git LFS).
 planning/RL/PalletFit_RL/weight_files/*.zip
 !planning/RL/PalletFit_RL/weight_files/best_model.zip
+
+# External baseline repos: machine-specific symlinks (see external/README.md)
+planning/adapters/external/*
+!planning/adapters/external/README.md
